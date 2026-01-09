@@ -1,98 +1,383 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { getNews } from '@/api/server';
+import { NewsCard } from '@/components/NewsCard';
+import { NewsSkeleton } from '@/components/NewsSkeleton';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Colors } from '@/constants/theme';
+import { useCategory } from '@/context/CategoryContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const theme = Colors[colorScheme ?? 'light'];
+  const { selectedSubcategoryId, selectedCategoryName } = useCategory();
+  const [topStories, setTopStories] = useState<any[]>([]);
+  const [recentPosts, setRecentPosts] = useState<any[]>([]);
+  const [topPicks, setTopPicks] = useState<any[]>([]);
+  const [popularNews, setPopularNews] = useState<any[]>([]);
+  const [articlesData, setArticlesData] = useState<any[]>([]);
+  const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  useEffect(() => {
+    fetchData();
+  }, [selectedSubcategoryId]); // Refetch when subcategory changes
+
+  const fetchData = async () => {
+    if (!selectedSubcategoryId) return;
+    setIsLoading(true);
+    try {
+      // Helper to fetch with fallback to 'latest' if empty
+      const fetchSectionData = async (primaryParams: any, fallbackLimit: number = 5) => {
+          try {
+              const res = await getNews(primaryParams);
+              const data = res.results || res || [];
+              if (data.length > 0) return data;
+              
+              // Fallback to simple latest news if primary yields simplified results
+              // Keeping the same subcategory_id
+              const fallbackRes = await getNews({ 
+                  subcategory_id: selectedSubcategoryId, 
+                  latest: '1', 
+                  limit: fallbackLimit 
+              });
+              return fallbackRes.results || fallbackRes || [];
+          } catch (e) {
+              console.log("Section fetch error, trying fallback", e);
+              // One last try on error
+              const fallbackRes = await getNews({ 
+                  subcategory_id: selectedSubcategoryId, 
+                  latest: '1', 
+                  limit: fallbackLimit 
+              });
+              return fallbackRes.results || fallbackRes || [];
+          }
+      };
+
+      // 1. Top Stories (Primary Feed)
+      // For Top Stories, the default call is effectively latest, so usually no fallback needed unless we want to strip subcategory?
+      // But let's safeguard it with a direct call.
+      const topRes = await getNews({ subcategory_id: selectedSubcategoryId, limit: 10 });
+      setTopStories(topRes.results || topRes || []);
+
+      // 2. Recent Posts
+      const recentData = await fetchSectionData(
+          { subcategory_id: selectedSubcategoryId, latest: '1', headlines: '1', limit: 5 }, 
+          5
+      );
+      setRecentPosts(recentData);
+
+      // 3. Top Picks (Trending)
+      const trendingData = await fetchSectionData(
+          { subcategory_id: selectedSubcategoryId, trending: '1', limit: 5 },
+          5
+      );
+      setTopPicks(trendingData);
+
+      // 4. Popular News (Headlines + Trending)
+      const popularData = await fetchSectionData(
+          { subcategory_id: selectedSubcategoryId, headlines: '1', trending: '1', limit: 5 },
+          5
+      );
+      setPopularNews(popularData);
+
+      // 5. Articles
+      const articlesSectionData = await fetchSectionData(
+          { subcategory_id: selectedSubcategoryId, articles: '1', trending: '1', latest: '1', limit: 10 },
+          10
+      );
+      setArticlesData(articlesSectionData);
+
+      // 6. Fetch Breaking Section (Latest + Trending Mixed)
+      // Fetch both parallely
+      const [latestMixRes, trendingMixRes] = await Promise.all([
+          getNews({ subcategory_id: selectedSubcategoryId, latest: '1', limit: 4 }),
+          getNews({ subcategory_id: selectedSubcategoryId, trending: '1', limit: 4 })
+      ]);
+      
+      const latestItems = latestMixRes.results || latestMixRes || [];
+      const trendingItems = trendingMixRes.results || trendingMixRes || [];
+      
+      // Merge and Deduplicate by ID
+      const mixedMap = new Map();
+      [...latestItems, ...trendingItems].forEach(item => {
+          mixedMap.set(item.id, item);
+      });
+      const mixedNews = Array.from(mixedMap.values());
+      
+      setBreakingSectionNews(mixedNews);
+
+    } catch (e) {
+      console.log('Error fetching home data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewAll = (title: string, type: string) => {
+    router.push({ pathname: '/post' as any, params: { title, type } });
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "JUST NOW";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    // Format: "30 Dec 2025"
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  return (
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Web Stories Section */}
+      {/* <WebStories /> */}
+      
+      {/* Nanhe Patrakar Promo Banner */}
+      <TouchableOpacity 
+        activeOpacity={0.9}
+        onPress={() => router.push('/nanhe-patrakar' as any)}
+        style={{ margin: 16, marginBottom: 8, borderRadius: 16, overflow: 'hidden', elevation: 4, shadowColor: '#E31E24', shadowOffset: {width:0, height:4}, shadowOpacity: 0.3, shadowRadius: 8 }}
+      >
+        <LinearGradient
+            colors={['#E31E24', '#B71C1C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+            <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>NEW</Text>
+                    </View>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>नन्हे पत्रकार</Text>
+                </View>
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' }}>हिमाचल के बच्चों की नई आवाज़ • भाग लें</Text>
+            </View>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="arrow-forward" size={24} color="#fff" />
+            </View>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* 1. Top Stories Section */}
+      {/* 1. Top Stories Section */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader 
+            title={`Top Stories and Breaking News in ${selectedCategoryName || 'UAE News'}`} 
+            onViewAll={() => handleViewAll('Top Stories', 'top_stories')} 
+        />
+        <View style={{ minHeight: 200, justifyContent: 'center' }}>
+            {isLoading ? (
+                 <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.sliderContent}
+                 >
+                    {[1, 2, 3].map((i) => (
+                        <View key={i} style={{ width: width * 0.85, marginHorizontal: 8 }}>
+                            <NewsSkeleton width="100%" />
+                        </View>
+                    ))}
+                 </ScrollView>
+            ) : (
+             <View>
+                <ScrollView 
+                horizontal 
+                decelerationRate="fast"
+                snapToInterval={width * 0.85 + 16} // Window width + margins
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sliderContent}
+                >
+                {topStories.map((item) => (
+                    <View key={item.id} style={{ width: width * 0.85, marginHorizontal: 8 }}>
+                    <NewsCard
+                        title={item.post_title || item.title}
+                        image={item.image}
+                        category={item.category || "UAE News"}
+                        author={item.posted_by || item.author || "Unknown"}
+                        date={item.post_date || item.date}
+                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                        width="100%" // Let parent control width
+                    />
+                    </View>
+                ))}
+                </ScrollView>
+            </View>
+            )}
+        </View>
+      </View>
+
+      {/* 2. Recent Post Section */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="Recent Post" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
+        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
+            {isLoading ? (
+                [1, 2].map(i => <NewsSkeleton key={i} />)
+            ) : (
+                <View>
+                    {recentPosts.map((item) => (
+                    <NewsCard
+                        key={item.id}
+                        title={item.post_title || item.title}
+                        image={item.image}
+                        category={item.category || "Recent"}
+                        author={item.posted_by || item.author || "Unknown"}
+                        date={item.post_date || item.date}
+                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                    />
+                    ))}
+                </View>
+            )}
+        </View>
+      </View>
+
+      {/* 3. Top Picks Section */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="Top Picks" onViewAll={() => handleViewAll('Top Picks', 'top_picks')} />
+        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
+            {isLoading ? (
+                [1, 2].map(i => <NewsSkeleton key={i} />)
+            ) : (
+                <View>
+                    {topPicks.map((item) => (
+                    <NewsCard
+                        key={item.id}
+                        title={item.post_title || item.title}
+                        image={item.image}
+                        category="Top Pick" 
+                        author={item.posted_by || item.author || "Unknown"}
+                        date={item.post_date || item.date}
+                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                    />
+                    ))}
+                </View>
+            )}
+        </View>
+      </View>
+
+      {/* 4. Popular News Section - Only show if loading or if data exists */}
+      {(isLoading || popularNews.length > 0) && (
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="Popular News" onViewAll={() => handleViewAll('Popular News', 'popular')} />
+        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
+            {isLoading ? (
+                [1, 2].map(i => <NewsSkeleton key={i} />)
+            ) : (
+                <View>
+                    {popularNews.map((item) => (
+                    <NewsCard
+                        key={item.id}
+                        title={item.post_title || item.title}
+                        image={item.image}
+                        category={item.category || "Popular"}
+                        author={item.posted_by || item.author || "Unknown"}
+                        date={item.post_date || item.date}
+                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                    />
+                    ))}
+                </View>
+            )}
+        </View>
+      </View>
+      )}
+
+      {/* 5. Articles Section */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="Articles" onViewAll={() => handleViewAll('Articles', 'articles')} />
+        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
+             {isLoading ? (
+                [1, 2, 3].map(i => <NewsSkeleton key={i} />)
+             ) : (
+                <View>
+                    {articlesData.map((item) => (
+                    <NewsCard
+                        key={item.id}
+                        title={item.post_title || item.title}
+                        image={item.image}
+                        category="Article"
+                        author={item.posted_by || item.author || "Unknown"}
+                        date={item.post_date || item.date}
+                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                    />
+                    ))}
+                     {articlesData.length === 0 && (
+                        <View style={{ padding: 20, alignItems: 'center' }}>
+                            <Text style={{ color: theme.icon }}>No articles found.</Text>
+                        </View>
+                    )}
+                </View>
+             )}
+        </View>
+      </View>
+
+      {/* 5. Breaking News Section */}
+      <View style={[styles.sectionContainer, { paddingBottom: 40 }]}>
+        <SectionHeader title="Breaking News" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
+        <View style={{ minHeight: 100, justifyContent: 'center' }}>
+            <View style={{ opacity: isLoading ? 0.4 : 1 }}>
+                {breakingSectionNews.map((item) => (
+                <TouchableOpacity key={item.id} onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}>
+                    <View style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}>
+                        <Text style={[styles.breakingTitle, { color: theme.text }]}>{item.post_title || item.title}</Text>
+                        <Text style={[styles.breakingMeta, { color: theme.accent }]}>BREAKING • {formatDate(item.post_date || item.date)}</Text>
+                    </View>
+                </TouchableOpacity>
+                ))}
+            </View>
+            {isLoading && (
+                <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', zIndex: 1 }]}>
+                    <ActivityIndicator size="small" color={theme.text} />
+                </View>
+            )}
+        </View>
+      </View>
+
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  sectionContainer: {
+    marginBottom: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  mainHeader: {
+    fontSize: 22,
+    fontWeight: '300',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    lineHeight: 30,
+  },
+  horizontalList: {
+    paddingHorizontal: 16,
+  },
+  breakingItem: {
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  breakingTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  breakingMeta: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  sliderContent: {
+    paddingHorizontal: 8,
+  },
+  sliderItem: {
+    width: width - 32, // Full width minus padding
+    marginHorizontal: 8,
   },
 });
