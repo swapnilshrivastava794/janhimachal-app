@@ -68,7 +68,7 @@ export default function NanhePatrakarContainer() {
   const theme = Colors[colorScheme ?? 'light'];
   
   // Demo Logic: This would come from your real Auth state
-  const hasRegisteredChild = true; 
+  const hasRegisteredChild = false; 
 
   const [activeTab, setActiveTab] = useState<'hub' | 'guide' | 'portfolio'>('hub');
 
