@@ -1,19 +1,23 @@
+import { getChildProfilesList, getNanhePatrakarTopics, getSubmissions } from '@/api/server';
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Dimensions,
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -62,7 +66,88 @@ export default function NanhePatrakarHubScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
+    const { user } = useAuth();
     const [activeFilter, setActiveFilter] = useState('All');
+    const [childProfiles, setChildProfiles] = useState<any[]>([]);
+    const [topics, setTopics] = useState<any[]>([]);
+    const [submissions, setSubmissions] = useState<any[]>([]);
+    const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+    const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true);
+    const [isMoreLoading, setIsMoreLoading] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasNextPage, setHasNextPage] = useState(false);
+
+    useEffect(() => {
+        fetchChildProfiles();
+        fetchTopics();
+    }, []);
+
+    useEffect(() => {
+        setPage(1);
+        fetchSubmissions(1, true);
+    }, [activeFilter]);
+
+    const fetchTopics = async () => {
+        try {
+            const res = await getNanhePatrakarTopics();
+            if (res.data && res.data.status && res.data.data && res.data.data.results) {
+                setTopics(res.data.data.results);
+            }
+        } catch (err) {
+            console.error("Error fetching topics:", err);
+        }
+    };
+
+    const fetchSubmissions = async (pageNum: number, reset: boolean = false) => {
+        try {
+            if (reset) setIsLoadingSubmissions(true);
+            else setIsMoreLoading(true);
+
+            const selectedTopic = topics.find(t => t.title === activeFilter);
+            const params: any = {
+                status: 'APPROVED',
+                page: pageNum,
+                page_size: 10
+            };
+            if (selectedTopic) {
+                params.topic_id = selectedTopic.id;
+            }
+
+            const res = await getSubmissions(params);
+            if (res.data && res.data.status) {
+                const newResults = res.data.data.results;
+                setSubmissions(prev => reset ? newResults : [...prev, ...newResults]);
+                setHasNextPage(!!res.data.data.next);
+                setPage(pageNum);
+            }
+        } catch (err) {
+            console.error("Error fetching submissions:", err);
+        } finally {
+            setIsLoadingSubmissions(false);
+            setIsMoreLoading(false);
+        }
+    };
+
+    const loadMore = () => {
+        if (!isMoreLoading && hasNextPage) {
+            fetchSubmissions(page + 1);
+        }
+    };
+
+    const fetchChildProfiles = async () => {
+        try {
+            const res = await getChildProfilesList();
+            if (res.data && res.data.status && res.data.data && res.data.data.results) {
+                setChildProfiles(res.data.data.results);
+            }
+        } catch (err) {
+            console.error("Error fetching child profiles:", err);
+        } finally {
+            setIsLoadingProfiles(false);
+        }
+    };
+
+    const hasRegisteredChild = !!user && user?.user_type === 'nanhe_patrakar';
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background, paddingTop: STATUSBAR_HEIGHT + 15 }]}>
@@ -80,114 +165,210 @@ export default function NanhePatrakarHubScreen() {
                         <Text style={[styles.hubTitle, { color: theme.text }]}>नन्हे पत्रकार हब</Text>
                     </View>
                 </View>
-                <TouchableOpacity 
-                    onPress={() => router.push('/nanhe-patrakar' as any)}
-                    style={[styles.joinHeaderBtn, { backgroundColor: theme.primary }]}
-                >
-                    <Text style={styles.joinHeaderBtnText}>Join Now</Text>
-                </TouchableOpacity>
+                {!hasRegisteredChild && (
+                    <TouchableOpacity 
+                        onPress={() => router.push('/nanhe-patrakar' as any)}
+                        style={[styles.joinHeaderBtn, { backgroundColor: theme.primary }]}
+                    >
+                        <Text style={styles.joinHeaderBtnText}>Join Now</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
                 
                 {/* --- Join Program Banner --- */}
-                <TouchableOpacity 
-                    activeOpacity={0.9}
-                    onPress={() => router.push('/nanhe-patrakar' as any)}
-                    style={styles.joinBanner}
-                >
-                    <LinearGradient
-                        colors={[theme.primary, '#B71C1C']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.joinBannerGradient}
+                {!hasRegisteredChild && (
+                    <TouchableOpacity 
+                        activeOpacity={0.9}
+                        onPress={() => router.push('/nanhe-patrakar' as any)}
+                        style={styles.joinBanner}
                     >
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.joinBannerTitle}>अपने बच्चे को बनाएं हिमाचल की आवाज़!</Text>
-                            <Text style={styles.joinBannerSub}>नन्हे पत्रकार से जुड़कर अपने बच्चे के आत्मविश्वास और टैलेंट को नई उड़ान दें</Text>
-                        </View>
-                        <View style={styles.joinBannerIcon}>
-                            <Ionicons name="megaphone" size={24} color="#fff" />
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
+                        <LinearGradient
+                            colors={[theme.primary, '#B71C1C']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.joinBannerGradient}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.joinBannerTitle}>अपने बच्चे को बनाएं हिमाचल की आवाज़!</Text>
+                                <Text style={styles.joinBannerSub}>नन्हे पत्रकार से जुड़कर अपने बच्चे के आत्मविश्वास और टैलेंट को नई उड़ान दें</Text>
+                            </View>
+                            <View style={styles.joinBannerIcon}>
+                                <Ionicons name="megaphone" size={24} color="#fff" />
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                )}
                 
                 {/* --- Story Circles (Featured) --- */}
                 <View style={styles.storyStrip}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storyScroll}>
-                        {FEATURED_STUDENTS.map((s) => (
-                            <TouchableOpacity key={s.id} style={styles.storyCircleWrapper}>
-                                <LinearGradient
-                                    colors={['#FFD700', '#FFA500']}
-                                    style={styles.storyRing}
+                        {childProfiles.length > 0 ? (
+                            childProfiles.map((child) => (
+                                <TouchableOpacity 
+                                    key={child.id} 
+                                    style={styles.storyCircleWrapper}
+                                    onPress={() => router.push({ pathname: '/nanhe-patrakar-child-profile', params: { id: child.id } } as any)}
                                 >
-                                    <Image source={{ uri: s.avatar }} style={styles.storyAvatar} />
-                                </LinearGradient>
-                                <Text style={[styles.storyName, { color: theme.text }]}>{s.name}</Text>
-                            </TouchableOpacity>
-                        ))}
+                                    <LinearGradient
+                                        colors={['#FFD700', '#FFA500']}
+                                        style={styles.storyRing}
+                                    >
+                                        <Image 
+                                            source={{ uri: child.photo ? `${constant.appBaseUrl}${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }} 
+                                            style={styles.storyAvatar} 
+                                            onLoad={() => console.log('✅ Image loaded:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
+                                            onError={(e) => console.error('❌ Image load error:', e.nativeEvent.error, 'URL:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
+                                        />
+                                    </LinearGradient>
+                                    <Text style={[styles.storyName, { color: theme.text }]} numberOfLines={1}>
+                                        {child.name.split(' ')[0]}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))
+                        ) : isLoadingProfiles ? (
+                            // Shimmer or generic circles could go here
+                            [1,2,3,4,5].map((i) => (
+                                <View key={i} style={styles.storyCircleWrapper}>
+                                    <View style={[styles.storyRing, { backgroundColor: theme.borderColor + '40' }]} />
+                                    <View style={{ height: 10, width: 40, backgroundColor: theme.borderColor + '40', marginTop: 5, borderRadius: 5 }} />
+                                </View>
+                            ))
+                        ) : (
+                            FEATURED_STUDENTS.map((s) => (
+                                <TouchableOpacity key={s.id} style={styles.storyCircleWrapper}>
+                                    <LinearGradient
+                                        colors={['#FFD700', '#FFA500']}
+                                        style={styles.storyRing}
+                                    >
+                                        <Image source={{ uri: s.avatar }} style={styles.storyAvatar} />
+                                    </LinearGradient>
+                                    <Text style={[styles.storyName, { color: theme.text }]}>{s.name}</Text>
+                                </TouchableOpacity>
+                            ))
+                        )}
                     </ScrollView>
                 </View>
 
                 {/* --- Filter Tabs --- */}
                 <View style={styles.filterStrip}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                        {['All', 'लेख', 'कविता', 'वीडियो', 'गीत'].map((f) => (
+                        {/* Always show "All" */}
+                        <TouchableOpacity 
+                            onPress={() => setActiveFilter('All')}
+                            style={[
+                                styles.filterTab, 
+                                { backgroundColor: activeFilter === 'All' ? theme.primary : ((theme as any).card || theme.background) }
+                            ]}
+                        >
+                            <Text style={[styles.filterText, { color: activeFilter === 'All' ? '#fff' : theme.text }]}>All</Text>
+                        </TouchableOpacity>
+
+                        {/* Show dynamic topics */}
+                        {topics.map((t) => (
                             <TouchableOpacity 
-                                key={f} 
-                                onPress={() => setActiveFilter(f)}
+                                key={t.id} 
+                                onPress={() => setActiveFilter(t.title)}
                                 style={[
                                     styles.filterTab, 
-                                    { backgroundColor: activeFilter === f ? theme.primary : ((theme as any).card || theme.background) }
+                                    { backgroundColor: activeFilter === t.title ? theme.primary : ((theme as any).card || theme.background) }
                                 ]}
                             >
-                                <Text style={[styles.filterText, { color: activeFilter === f ? '#fff' : theme.text }]}>{f}</Text>
+                                <Text style={[styles.filterText, { color: activeFilter === t.title ? '#fff' : theme.text }]}>
+                                    {t.title_hindi || t.title}
+                                </Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
                 </View>
 
-                {/* --- Main Grid Content --- */}
+                {/* --- Posts Grid --- */}
                 <View style={styles.gridContainer}>
-                    {HUB_POSTS.map((post) => (
-                            <TouchableOpacity 
-                                key={post.id} 
-                                style={[styles.hubCard, { backgroundColor: (theme as any).card || theme.background }]}
-                                activeOpacity={0.9}
-                                onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: post.id } } as any)}
-                            >
-                            <Image source={{ uri: post.image }} style={styles.cardImg} />
-                            <LinearGradient
-                                colors={['transparent', 'rgba(0,0,0,0.8)']}
-                                style={styles.cardOverlay}
-                            >
-                                <View style={styles.cardHeader}>
-                                    <View style={styles.catBadge}>
-                                        <Text style={styles.catText}>{post.category}</Text>
-                                    </View>
-                                    <View style={styles.viewBadge}>
-                                        <Ionicons name="eye" size={12} color="#fff" />
-                                        <Text style={styles.viewText}>{post.views}</Text>
-                                    </View>
-                                </View>
-                                
-                                <View style={styles.cardFooter}>
-                                    <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
-                                    <View style={styles.authorRow}>
-                                        <View style={styles.authorCircle}>
-                                            <Ionicons name="person" size={10} color="#fff" />
+                    {isLoadingSubmissions ? (
+                        <View style={{ padding: 50, alignItems: 'center' }}>
+                            <ActivityIndicator size="large" color={theme.primary} />
+                            <Text style={{ marginTop: 10, color: theme.text, opacity: 0.6 }}>खबरें लोड हो रही हैं...</Text>
+                        </View>
+                    ) : submissions.length > 0 ? (
+                        submissions.map((post) => {
+                            const firstMedia = post.media_files && post.media_files.length > 0 ? post.media_files[0].file : null;
+                            // Ensure URL is absolute if it's relative
+                            const imageUrl = firstMedia ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`) : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=500&auto=format&fit=crop';
+
+                            return (
+                                <TouchableOpacity 
+                                    key={post.id} 
+                                    style={[styles.hubCard, { backgroundColor: (theme as any).card || theme.background }]}
+                                    activeOpacity={0.9}
+                                    onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: post.id } } as any)}
+                                >
+                                <Image source={{ uri: imageUrl }} style={styles.cardImg} />
+                                <LinearGradient
+                                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                                    style={styles.cardOverlay}
+                                >
+                                    <View style={styles.cardHeader}>
+                                        <View style={styles.catBadge}>
+                                            <Text style={styles.catText}>{post.topic_title_hindi || post.topic_title}</Text>
                                         </View>
-                                        <Text style={styles.authorName}>{post.student}</Text>
-                                        <View style={styles.dot} />
-                                        <Text style={styles.authorSchool} numberOfLines={1}>{post.school}</Text>
+                                        <View style={styles.viewBadge}>
+                                            <Ionicons name="eye" size={12} color="#fff" />
+                                            <Text style={styles.viewText}>{post.views || '0'}</Text>
+                                        </View>
                                     </View>
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    ))}
+                                    
+                                    <View style={styles.cardFooter}>
+                                        <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
+                                        <View style={styles.authorRow}>
+                                            <View style={styles.authorCircle}>
+                                                <Ionicons name="person" size={10} color="#fff" />
+                                            </View>
+                                            <Text style={styles.authorName}>{post.child_name}</Text>
+                                            <View style={styles.dot} />
+                                            <Text style={styles.authorSchool} numberOfLines={1}>
+                                                Group {post.child_age_group}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            )
+                        })
+                    ) : (
+                        <View style={{ padding: 50, alignItems: 'center' }}>
+                            <Ionicons name="newspaper-outline" size={48} color={theme.text} style={{ opacity: 0.2 }} />
+                            <Text style={{ marginTop: 10, color: theme.text, opacity: 0.4 }}>इस कैटेगरी में कोई खबर नहीं है</Text>
+                        </View>
+                    )}
                 </View>
+
+                {/* --- Load More --- */}
+                {hasNextPage && (
+                    <TouchableOpacity 
+                        style={[styles.loadMoreBtn, { borderColor: theme.borderColor }]} 
+                        onPress={loadMore}
+                        disabled={isMoreLoading}
+                    >
+                        {isMoreLoading ? (
+                            <ActivityIndicator size="small" color={theme.primary} />
+                        ) : (
+                            <Text style={[styles.loadMoreText, { color: theme.primary }]}>और देखें (Load More)</Text>
+                        )}
+                    </TouchableOpacity>
+                )}
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* --- Submit FAB (Only for registered kids) --- */}
+            {hasRegisteredChild && (
+                <TouchableOpacity 
+                    style={[styles.fab, { backgroundColor: theme.primary }]}
+                    onPress={() => router.push('/nanhe-patrakar-submission' as any)}
+                >
+                    <Ionicons name="add" size={32} color="#fff" />
+                </TouchableOpacity>
+            )}
         </View>
     );
 }
@@ -361,8 +542,19 @@ const styles = StyleSheet.create({
     },
     authorName: { color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '800' },
     dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.5)' },
-    authorSchool: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600', flex: 1 },
+    authorSchool: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '500', flex: 1 },
 
+  // Load More
+  loadMoreBtn: { 
+    margin: 20, 
+    padding: 15, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    marginBottom: 40
+  },
+  loadMoreText: { fontWeight: '700', fontSize: 14 },
     fab: {
         position: 'absolute',
         bottom: 30,

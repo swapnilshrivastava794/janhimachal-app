@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -12,15 +12,15 @@ const { width, height } = Dimensions.get('window');
 export default function SignupScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const { redirect } = useLocalSearchParams();
   const theme = Colors[colorScheme ?? 'light'];
   
   const { signup } = useAuth();
   
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
   const [password, setPassword] = useState('');
   const [isSigningUp, setIsSigningUp] = useState(false);
 
@@ -51,15 +51,44 @@ export default function SignupScreen() {
           <View style={[styles.card, { backgroundColor: theme.background, shadowColor: theme.cardShadow }]}>
               
               <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Full Name</Text>
+                  <Text style={[styles.label, { color: theme.text }]}>First Name</Text>
                   <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
                       <Ionicons name="person-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                       <TextInput 
                           style={[styles.input, { color: theme.text }]}
-                          placeholder="Ex. John Doe"
+                          placeholder="Ex. Swapnil"
                           placeholderTextColor={theme.placeholderText}
-                          value={name}
-                          onChangeText={setName}
+                          value={firstName}
+                          onChangeText={setFirstName}
+                      />
+                  </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>Last Name</Text>
+                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
+                      <Ionicons name="person-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
+                      <TextInput 
+                          style={[styles.input, { color: theme.text }]}
+                          placeholder="Ex. Shrivastava"
+                          placeholderTextColor={theme.placeholderText}
+                          value={lastName}
+                          onChangeText={setLastName}
+                      />
+                  </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: theme.text }]}>Username</Text>
+                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
+                      <Ionicons name="at-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
+                      <TextInput 
+                          style={[styles.input, { color: theme.text }]}
+                          placeholder="Ex. abhishek"
+                          placeholderTextColor={theme.placeholderText}
+                          autoCapitalize="none"
+                          value={username}
+                          onChangeText={setUsername}
                       />
                   </View>
               </View>
@@ -70,54 +99,12 @@ export default function SignupScreen() {
                       <Ionicons name="mail-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                       <TextInput 
                           style={[styles.input, { color: theme.text }]}
-                          placeholder="Your email address"
+                          placeholder="abhishek@gmail.com"
                           placeholderTextColor={theme.placeholderText}
                           keyboardType="email-address"
+                          autoCapitalize="none"
                           value={email}
                           onChangeText={setEmail}
-                      />
-                  </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Phone Number</Text>
-                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
-                      <Ionicons name="call-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
-                      <TextInput 
-                          style={[styles.input, { color: theme.text }]}
-                          placeholder="Ex. 9876543210"
-                          placeholderTextColor={theme.placeholderText}
-                          keyboardType="phone-pad"
-                          value={phone}
-                          onChangeText={setPhone}
-                      />
-                  </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>City</Text>
-                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
-                      <Ionicons name="location-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
-                      <TextInput 
-                          style={[styles.input, { color: theme.text }]}
-                          placeholder="Ex. Dubai"
-                          placeholderTextColor={theme.placeholderText}
-                          value={city}
-                          onChangeText={setCity}
-                      />
-                  </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Country</Text>
-                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
-                      <Ionicons name="globe-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
-                      <TextInput 
-                          style={[styles.input, { color: theme.text }]}
-                          placeholder="Ex. UAE"
-                          placeholderTextColor={theme.placeholderText}
-                          value={country}
-                          onChangeText={setCountry}
                       />
                   </View>
               </View>
@@ -150,13 +137,17 @@ export default function SignupScreen() {
                 disabled={isSigningUp}
                 onPress={async () => {
                     try {
-                        if (!name || !email || !password || !phone || !city || !country) {
+                        if (!firstName || !lastName || !username || !email || !password) {
                             alert('Please fill all fields');
                             return;
                         }
                         setIsSigningUp(true);
-                        await signup({ name, email, password, phone, city, country });
-                        router.replace('/(tabs)/profile');
+                        await signup({ firstName, lastName, username, email, password });
+                        if (redirect) {
+                            router.replace(redirect as any);
+                        } else {
+                            router.replace('/(tabs)/profile');
+                        }
                     } catch (error: any) {
                         alert(error.message || 'Signup failed');
                     } finally {
@@ -182,7 +173,10 @@ export default function SignupScreen() {
 
           <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.placeholderText }]}>Already have an account?</Text>
-              <TouchableOpacity onPress={() => router.back()}>
+              <TouchableOpacity onPress={() => router.push({
+                  pathname: '/auth/login',
+                  params: { redirect }
+              } as any)}>
                   <Text style={[styles.signupText, { color: theme.primary }]}>Log In</Text>
               </TouchableOpacity>
           </View>

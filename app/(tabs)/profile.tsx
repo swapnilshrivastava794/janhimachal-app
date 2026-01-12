@@ -1,15 +1,20 @@
+import { getDistricts } from '@/api/server';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Dimensions,
+    FlatList,
     Image,
+    Modal,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -28,25 +33,79 @@ export default function ProfileScreen() {
   const theme = Colors[colorScheme ?? 'light'];
   const router = useRouter();
 
-  const { user, isLoading, logout, updateProfile } = useAuth();
+  const { user, parentProfile, isLoading, logout, updateProfile, refreshProfile } = useAuth();
 
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
+  const [district, setDistrict] = useState('');
+  const [districtId, setDistrictId] = useState('');
+  const [idProofImage, setIdProofImage] = useState<string | null>(null);
+  
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [showDistrictModal, setShowDistrictModal] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // For Demo: Assume child is registered
-  const hasRegisteredChild = true; 
+  // Check if child is registered as nanhe_patrakar
+  const isNanhePatrakar = (!!user && user?.user_type === 'nanhe_patrakar'); 
+
+  useEffect(() => {
+    refreshProfile();
+    fetchDistricts();
+  }, []);
+
+  const fetchDistricts = async () => {
+    try {
+        setIsLoadingDistricts(true);
+        const res = await getDistricts();
+        if (res.data && res.data.status) {
+            setDistricts(res.data.data.results || []);
+        }
+    } catch (err) {
+        console.error("Error fetching districts:", err);
+    } finally {
+        setIsLoadingDistricts(false);
+    }
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setIdProofImage(result.assets[0].uri);
+    }
+  };
 
   useEffect(() => {
     if (user) {
-        setName(user.name || '');
-        setPhone(user.phone || '');
-        setCity(user.city || '');
-        setCountry(user.country || '');
+        setUsername(user.username || '');
+        setFirstName(user.first_name || '');
+        setLastName(user.last_name || '');
+        setEmail(user.email || '');
     }
-  }, [user]);
+    if (parentProfile) {
+        if (parentProfile.mobile) setPhone(parentProfile.mobile);
+        if (parentProfile.city) setCity(parentProfile.city);
+        if (parentProfile.district) {
+            setDistrict(parentProfile.district.name);
+            setDistrictId(parentProfile.district.id.toString());
+        }
+        if (parentProfile.user) {
+            setUsername(parentProfile.user.username || username);
+            setFirstName(parentProfile.user.first_name || firstName);
+            setLastName(parentProfile.user.last_name || lastName);
+            setEmail(parentProfile.user.email || email);
+        }
+    }
+  }, [user, parentProfile]);
 
   if (isLoading) {
     return (
@@ -62,15 +121,38 @@ export default function ProfileScreen() {
 
   const handleUpdate = async () => {
       try {
-          if (!name || !phone || !city) {
-              alert('नाम, फोन और शहर अनिवार्य हैं।');
+          if (!username || !email || !firstName) {
+              Alert.alert('त्रुटि', 'यूजरनेम, ईमेल और नाम अनिवार्य हैं।');
               return;
           }
+          
           setIsUpdating(true);
-          await updateProfile({ name, phone, city, country });
-          alert('प्रोफ़ाइल सफलतापूर्वक अपडेट की गई');
+          
+          const payload: any = {
+              username,
+              first_name: firstName,
+              last_name: lastName,
+              email
+          };
+
+          if (isNanhePatrakar) {
+              payload.mobile = phone;
+              payload.city = city;
+              payload.district = districtId;
+              
+              if (idProofImage && !idProofImage.startsWith('http')) {
+                  payload.id_proof = {
+                      uri: idProofImage,
+                      name: 'id_proof.jpg',
+                      type: 'image/jpeg',
+                  };
+              }
+          }
+
+          await updateProfile(payload);
+          Alert.alert('सफलता', 'प्रोफ़ाइल सफलतापूर्वक अपडेट की गई');
       } catch (error: any) {
-          alert(error.message || 'अपडेट विफल रहा');
+          Alert.alert('त्रुटि', error.message || 'अपडेट विफल रहा');
       } finally {
           setIsUpdating(false);
       }
@@ -105,11 +187,11 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.userMeta}>
-                    <Text style={styles.userName}>{user.name}</Text>
+                    <Text style={styles.userName}>{firstName} {lastName}</Text>
                     <View style={styles.userRoleTag}>
-                        <Ionicons name={hasRegisteredChild ? "shield-checkmark" : "person"} size={12} color="#E31E24" />
+                        <Ionicons name={isNanhePatrakar ? "shield-checkmark" : "person"} size={12} color="#E31E24" />
                         <Text style={styles.userRoleText}>
-                            {hasRegisteredChild ? 'अभिभावक (Parent)' : 'यूजर (Normal User)'}
+                            {isNanhePatrakar ? 'अभिभावक (Parent)' : 'यूजर (Normal User)'}
                         </Text>
                     </View>
                 </View>
@@ -117,55 +199,65 @@ export default function ProfileScreen() {
         </LinearGradient>
 
         {/* --- Selection Logic --- */}
-        {hasRegisteredChild ? (
+        {isNanhePatrakar && parentProfile ? (
             <View style={styles.prideSection}>
                 <Text style={[styles.sectionLabel, { color: theme.text }]}>नन्हा पत्रकार - पैरेंट पोर्टल</Text>
-                <TouchableOpacity 
-                    activeOpacity={0.9}
-                    style={styles.prideCard}
-                    onPress={() => router.push('/nanhe-patrakar-portfolio')}
-                >
-                    <LinearGradient
-                        colors={['#1A1A1A', '#2C2C2C']}
-                        style={styles.prideGradient}
+                {parentProfile.children.map((child) => (
+                    <TouchableOpacity 
+                        key={child.id}
+                        activeOpacity={0.9}
+                        style={[styles.prideCard, { marginBottom: 15 }]}
+                        onPress={() => router.push('/nanhe-patrakar-portfolio')}
                     >
-                        <View style={styles.prideTop}>
-                            <Image 
-                                source={{ uri: 'https://avatar.iran.liara.run/public/boy?username=Rohan' }} 
-                                style={styles.childAvatar} 
-                            />
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.childName}>रोहन ठाकुर</Text>
-                                <Text style={styles.childBrief}>जूनियर रिपोर्टर • JH-NP-2026</Text>
+                        <LinearGradient
+                            colors={['#1A1A1A', '#2C2C2C']}
+                            style={styles.prideGradient}
+                        >
+                            <View style={styles.prideTop}>
+                                <Image 
+                                    source={{ uri: child.photo ? `https://janhimachal.com${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }} 
+                                    style={styles.childAvatar} 
+                                />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.childName}>{child.name}</Text>
+                                    <Text style={styles.childBrief}>
+                                        {parentProfile.program.name_hindi || parentProfile.program.name} • {parentProfile.district.name}
+                                    </Text>
+                                </View>
+                                <View style={styles.childVerified}>
+                                    <Ionicons name="ribbon" size={24} color="#E31E24" />
+                                </View>
                             </View>
-                            <View style={styles.childVerified}>
-                                <Ionicons name="ribbon" size={24} color="#E31E24" />
+                            
+                            <View style={styles.childStats}>
+                                <View style={styles.statMini}>
+                                    <Text style={styles.statMiniVal}>--</Text>
+                                    <Text style={styles.statMiniLab}>खबरें</Text>
+                                </View>
+                                <View style={styles.statDivider} />
+                                <View style={styles.statMini}>
+                                    <Text style={styles.statMiniVal}>--</Text>
+                                    <Text style={styles.statMiniLab}>रीडर्स</Text>
+                                </View>
+                                <View style={styles.statDivider} />
+                                <View style={styles.statMini}>
+                                    <Text style={styles.statMiniVal}>--</Text>
+                                    <Text style={styles.statMiniLab}>शाबाशी</Text>
+                                </View>
                             </View>
-                        </View>
-                        
-                        <View style={styles.childStats}>
-                            <View style={styles.statMini}>
-                                <Text style={styles.statMiniVal}>05</Text>
-                                <Text style={styles.statMiniLab}>खबरें</Text>
-                            </View>
-                            <View style={styles.statDivider} />
-                            <View style={styles.statMini}>
-                                <Text style={styles.statMiniVal}>2.4K</Text>
-                                <Text style={styles.statMiniLab}>रीडर्स</Text>
-                            </View>
-                            <View style={styles.statDivider} />
-                            <View style={styles.statMini}>
-                                <Text style={styles.statMiniVal}>12</Text>
-                                <Text style={styles.statMiniLab}>शाबाशी</Text>
-                            </View>
-                        </View>
 
-                        <View style={styles.prideFooter}>
-                            <Text style={styles.prideActionText}>पोर्टफोलियो और आईडी कार्ड देखें</Text>
-                            <Ionicons name="arrow-forward-circle" size={20} color="#E31E24" />
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
+                            <View style={styles.prideFooter}>
+                                <Text style={styles.prideActionText}>पोर्टफोलियो और आईडी कार्ड देखें</Text>
+                                <Ionicons name="arrow-forward-circle" size={20} color="#E31E24" />
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        ) : !parentProfile && isNanhePatrakar ? (
+            <View style={[styles.prideSection, { alignItems: 'center', padding: 20 }]}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <Text style={{ marginTop: 10, color: theme.placeholderText }}>प्रोफ़ाइल लोड हो रही है...</Text>
             </View>
         ) : (
             <View style={styles.prideSection}>
@@ -201,40 +293,165 @@ export default function ProfileScreen() {
         <View style={styles.formSection}>
             <Text style={[styles.sectionLabel, { color: theme.text }]}>अकाउंट जानकारी</Text>
             
+            <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.inputFloatingLabel}>First Name</Text>
+                        <TextInput 
+                            style={[styles.input, { color: '#1A1A1A' }]}
+                            value={firstName}
+                            onChangeText={setFirstName}
+                            placeholder="First Name"
+                        />
+                    </View>
+                </View>
+                <View style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.inputFloatingLabel}>Last Name</Text>
+                        <TextInput 
+                            style={[styles.input, { color: '#1A1A1A' }]}
+                            value={lastName}
+                            onChangeText={setLastName}
+                            placeholder="Last Name"
+                        />
+                    </View>
+                </View>
+            </View>
+
             <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
-                <Ionicons name="person-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                <Ionicons name="at-outline" size={20} color="#666" style={styles.inputIcon} />
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.inputFloatingLabel}>पूरा नाम</Text>
+                    <Text style={styles.inputFloatingLabel}>Username</Text>
                     <TextInput 
                         style={[styles.input, { color: '#1A1A1A' }]}
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="नाम दर्ज करें"
+                        value={username}
+                        onChangeText={setUsername}
+                        placeholder="Username"
                     />
                 </View>
             </View>
 
             <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
-                <Ionicons name="call-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                 <View style={{ flex: 1 }}>
-                    <Text style={styles.inputFloatingLabel}>फ़ोन नंबर</Text>
+                    <Text style={styles.inputFloatingLabel}>इमेल</Text>
                     <TextInput 
                         style={[styles.input, { color: '#1A1A1A' }]}
-                        value={phone}
-                        onChangeText={setPhone}
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="Email"
+                        keyboardType="email-address"
                     />
                 </View>
             </View>
+
+            {isNanhePatrakar && (
+                <>
+                    <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
+                        <Ionicons name="call-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.inputFloatingLabel}>फ़ोन नंबर</Text>
+                            <TextInput 
+                                style={[styles.input, { color: '#1A1A1A' }]}
+                                value={phone}
+                                onChangeText={setPhone}
+                                keyboardType="phone-pad"
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.rowInputs}>
+                        <View style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputFloatingLabel}>शहर (City)</Text>
+                                <TextInput 
+                                    style={[styles.input, { color: '#1A1A1A' }]}
+                                    value={city}
+                                    onChangeText={setCity}
+                                    placeholder="City"
+                                />
+                            </View>
+                        </View>
+                        <TouchableOpacity 
+                            style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}
+                            onPress={() => setShowDistrictModal(true)}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputFloatingLabel}>जिला (District)</Text>
+                                <Text style={[styles.input, { color: district ? '#1A1A1A' : '#999' }]}>
+                                    {district || "चुनें"}
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-down" size={20} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', alignItems: 'flex-start', paddingVertical: 15 }]}>
+                         <View style={{ flex: 1 }}>
+                            <Text style={styles.inputFloatingLabel}>पहचान पत्र (ID Proof)</Text>
+                            <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+                                {idProofImage ? (
+                                    <Image source={{ uri: idProofImage }} style={styles.uploadedImgPreview} />
+                                ) : (
+                                    <View style={styles.uploadPlaceholder}>
+                                        <Ionicons name="cloud-upload-outline" size={24} color="#666" />
+                                        <Text style={styles.uploadText}>अपलोड करें</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </>
+            )}
 
             <TouchableOpacity 
                 style={[styles.updateBtn, isUpdating && { opacity: 0.7 }]}
                 onPress={handleUpdate}
+                disabled={isUpdating}
             >
                 <View style={[styles.btnGradient, { backgroundColor: '#1A1A1A' }]}>
-                    <Text style={styles.updateBtnText}>प्रोफ़ाइल अपडेट करें</Text>
+                    {isUpdating ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.updateBtnText}>प्रोफ़ाइल अपडेट करें</Text>
+                    )}
                 </View>
             </TouchableOpacity>
         </View>
+
+        {/* --- District Modal --- */}
+        <Modal visible={showDistrictModal} animationType="slide" transparent={true}>
+            <View style={styles.modalOverlay}>
+                <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>ज़िला चुनें</Text>
+                        <TouchableOpacity onPress={() => setShowDistrictModal(false)}>
+                            <Ionicons name="close" size={24} color={theme.text} />
+                        </TouchableOpacity>
+                    </View>
+                    {isLoadingDistricts ? (
+                        <ActivityIndicator size="large" color={theme.primary} style={{ margin: 20 }} />
+                    ) : (
+                        <FlatList 
+                            data={districts}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity 
+                                    style={[styles.districtItem, { borderBottomColor: theme.borderColor }]}
+                                    onPress={() => {
+                                        setDistrict(item.name);
+                                        setDistrictId(item.id.toString());
+                                        setShowDistrictModal(false);
+                                    }}
+                                >
+                                    <Text style={[styles.districtItemText, { color: theme.text }]}>{item.name}</Text>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    )}
+                </View>
+            </View>
+        </Modal>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -367,5 +584,28 @@ const styles = StyleSheet.create({
   updateBtn: { marginTop: 10, borderRadius: 20, overflow: 'hidden' },
   btnGradient: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
   updateBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+
+  // Modal & District Helper Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800' },
+  districtItem: { paddingVertical: 15, borderBottomWidth: 1 },
+  districtItemText: { fontSize: 16, fontWeight: '600' },
+
+  // Upload Styles
+  uploadBox: { 
+    width: '100%', 
+    height: 120, 
+    borderRadius: 15, 
+    borderWidth: 1, 
+    borderColor: '#eee', 
+    borderStyle: 'dashed', 
+    marginTop: 10,
+    overflow: 'hidden'
+  },
+  uploadPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  uploadText: { fontSize: 12, color: '#666', marginTop: 5 },
+  uploadedImgPreview: { width: '100%', height: '100%' },
 });
 

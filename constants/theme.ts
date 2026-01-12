@@ -31,6 +31,8 @@ export const Colors = {
     subcategoryBg: '#F5F5F5', // Light Grey tint
     subcategoryText: '#000000',
     placeholderText: '#999',
+    card: '#fff',
+    danger: '#E31E24',
     cardShadow: '#000',
   },
   dark: {
@@ -55,6 +57,8 @@ export const Colors = {
     subcategoryBg: '#333333', 
     subcategoryText: '#ffffff',
     placeholderText: '#666',
+    card: '#1E1E1E',
+    danger: '#EF4444',
     cardShadow: '#000',
   },
 };

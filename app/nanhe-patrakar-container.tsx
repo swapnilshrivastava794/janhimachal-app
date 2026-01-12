@@ -1,11 +1,22 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Dimensions, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 import NanhePatrakarGuide from './nanhe-patrakar';
 import NanhePatrakarHub from './nanhe-patrakar-hub';
@@ -66,15 +77,31 @@ export default function NanhePatrakarContainer() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  const { user, isLoading } = useAuth();
   
-  // Demo Logic: This would come from your real Auth state
-  const hasRegisteredChild = false; 
+  if (isLoading) {
+    return (
+        <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+    );
+  }
+  
+  // Debug Log
+  React.useEffect(() => {
+    console.log('🔍 NanhePatrakarContainer: Current user_type is:', user?.user_type);
+  }, [user?.user_type]);
 
-  const [activeTab, setActiveTab] = useState<'hub' | 'guide' | 'portfolio'>('hub');
+  // Portfolio only shows if the user is explicitly a 'nanhe_patrakar'
+  const hasRegisteredChild = !!user && user?.user_type === 'nanhe_patrakar'; 
+
+  const [activeTab, setActiveTab] = useState<'hub' | 'guide' | 'portfolio' | 'add'>('hub');
 
   const tabs = [
     { id: 'hub', label: 'सितारे (Stars)', icon: 'planet-outline', activeIcon: 'planet' },
-    { id: 'guide', label: 'नियम (Guide)', icon: 'book-outline', activeIcon: 'book' },
+    hasRegisteredChild 
+      ? { id: 'add', label: 'खबर भेजें', icon: 'add-circle', activeIcon: 'add-circle' }
+      : { id: 'guide', label: 'नियम (Guide)', icon: 'book-outline', activeIcon: 'book' },
     { 
         id: 'portfolio', 
         label: hasRegisteredChild ? 'प्रोफ़ाइल' : 'जोड़ें (Join)', 
@@ -91,8 +118,20 @@ export default function NanhePatrakarContainer() {
         return <NanhePatrakarGuide />;
       case 'portfolio':
         return hasRegisteredChild ? <NanhePatrakarPortfolio /> : <NanhePatrakarJoinTeaser />;
+      case 'add':
+        // This case should ideally not be reached as we handle 'add' click separately,
+        // but kept for safety to show something.
+        return <NanhePatrakarPortfolio />;
       default:
         return <NanhePatrakarHub />;
+    }
+  };
+
+  const handleTabPress = (tabId: string) => {
+    if (tabId === 'add') {
+      router.push('/nanhe-patrakar-submission' as any);
+    } else {
+      setActiveTab(tabId as any);
     }
   };
 
@@ -114,7 +153,7 @@ export default function NanhePatrakarContainer() {
             return (
               <TouchableOpacity
                 key={tab.id}
-                onPress={() => setActiveTab(tab.id as any)}
+                onPress={() => handleTabPress(tab.id)}
                 style={styles.tabItem}
                 activeOpacity={0.7}
               >

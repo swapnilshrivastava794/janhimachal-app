@@ -13,9 +13,10 @@ const axiosInstance = axios.create({
 // PUBLIC ENDPOINTS (No token needed)
 // ----------------------------------------------------------
 const publicEndpoints = [
-  "api/auth/login/",
-  "/api/auth/register/",
+  "/api/nanhe-patrakar/login/",
+  "/api/register/",
   "/api/auth/otp/",
+  "/api/nanhe-patrakar/districts/",
 ];
 
 // ----------------------------------------------------------
@@ -111,22 +112,117 @@ export async function logoutUser() {
 // AUTH APIS (ONLY THESE ARE ACTIVE NOW)
 // ----------------------------------------------------------
 
-// LOGIN → JSON body
+// LOGIN → multipart/form-data
 export function login(payload) {
-  return axiosInstance.post("/api/auth/login/", payload);
-}
-
-// REGISTER → multipart/form-data
-export function signup(formData) {
-  return axiosInstance.post("/api/auth/register/", formData, {
+  const formData = new FormData();
+  formData.append('username', payload.username);
+  formData.append('password', payload.password);
+  
+  return axiosInstance.post("/api/nanhe-patrakar/login/", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
   });
 }
 
+// REGISTER → JSON
+export function signup(payload) {
+  return axiosInstance.post("/api/register/", payload);
+}
 
+// ----------------------------------------------------------
+// NANHE PATRAKAR APIS
+// ----------------------------------------------------------
 
+// GET DISTRICTS
+export function getDistricts() {
+  return axiosInstance.get("/api/nanhe-patrakar/districts/");
+}
+
+// GET PARENT PROFILE
+export function getParentProfile() {
+  return axiosInstance.get("/api/nanhe-patrakar/parent-profile/");
+}
+
+// GET MY CHILD PROFILES
+export function getMyChildProfiles() {
+  return axiosInstance.get("/api/nanhe-patrakar/child-profiles/");
+}
+
+// GET CHILD PROFILES LIST (Public/Featured)
+export function getChildProfilesList() {
+  return axiosInstance.get("/api/nanhe-patrakar/child-profiles/list/");
+}
+
+// GET CHILD PROFILE DETAIL
+export function getChildProfileDetail(id) {
+  return axiosInstance.get(`/api/nanhe-patrakar/child-profiles/${id}/`);
+}
+
+// GET NANHE PATRAKAR TOPICS (Filters)
+export function getNanhePatrakarTopics() {
+  return axiosInstance.get("/api/nanhe-patrakar/topics/");
+}
+
+// GET NANHE PATRAKAR SUBMISSIONS
+export function getSubmissions(params = {}) {
+  // params: { topic_id, status, page, page_size }
+  return axiosInstance.get("/api/nanhe-patrakar/submissions/", { params });
+}
+
+// CREATE NANHE PATRAKAR SUBMISSION
+export function createSubmission(formData) {
+  return axiosInstance.post("/api/nanhe-patrakar/submission/", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
+
+// GET SUBMISSION DETAIL
+export function getSubmissionDetail(id) {
+  return axiosInstance.get(`/api/nanhe-patrakar/submissions/${id}/`);
+}
+
+// UPDATE NORMAL PROFILE
+export function updateNormalProfile(payload) {
+  const formData = new FormData();
+  Object.keys(payload).forEach(key => formData.append(key, payload[key]));
+  return axiosInstance.put("/api/nanhe-patrakar/user/update/", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+}
+
+// UPDATE PARENT PROFILE
+export function updateParentProfile(payload) {
+  const formData = new FormData();
+  Object.keys(payload).forEach(key => {
+    if (payload[key] !== undefined && payload[key] !== null) {
+      formData.append(key, payload[key]);
+    }
+  });
+  return axiosInstance.put("/api/nanhe-patrakar/update/parent-profile/", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+}
+
+// ENROLLMENT → multipart/form-data
+export function enrollNanhePatrakar(payload) {
+  const formData = new FormData();
+  
+  // Append all fields to FormData
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] !== undefined && payload[key] !== null) {
+      formData.append(key, payload[key]);
+    }
+  });
+
+  return axiosInstance.post("/api/nanhe-patrakar/enrollment/", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
 
 export function getCategories() {
   return axiosInstance.get("/api/categories/", {

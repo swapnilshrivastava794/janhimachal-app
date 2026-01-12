@@ -3,7 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +15,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login } = useAuth();
   const colorScheme = useColorScheme();
+  const { redirect } = useLocalSearchParams();
   const theme = Colors[colorScheme ?? 'light'];
   
   const [email, setEmail] = useState('');
@@ -91,7 +92,11 @@ export default function LoginScreen() {
                         }
                         setIsLoggingIn(true);
                         await login(email, password);
-                        router.replace('/(tabs)/profile');
+                        if (redirect) {
+                            router.replace(redirect as any);
+                        } else {
+                            router.replace('/(tabs)/profile');
+                        }
                     } catch (error: any) {
                         alert(error.message || 'Login failed');
                     } finally {
@@ -135,7 +140,10 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.placeholderText }]}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push('/auth/signup')}>
+              <TouchableOpacity onPress={() => router.push({
+                  pathname: '/auth/signup',
+                  params: { redirect }
+              } as any)}>
                   <Text style={[styles.signupText, { color: theme.primary }]}>Sign Up</Text>
               </TouchableOpacity>
           </View>

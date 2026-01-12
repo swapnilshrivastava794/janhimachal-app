@@ -7,9 +7,13 @@ interface User {
     id: number;
     name: string;
     email: string;
-    phone: string;
-    city: string;
-    country: string;
+    phone?: string;
+    city?: string;
+    country?: string;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+    user_type?: string;
     avatar?: string; // API doesn't return this yet, keeping optional
     stats?: {        // API doesn't return this yet, keeping optional
         savedNews: number;
@@ -18,31 +22,69 @@ interface User {
     }
 }
 
+export interface ParentProfile {
+    id: number;
+    user: {
+        id: number;
+        username: string;
+        email: string;
+        first_name: string;
+        last_name: string;
+    };
+    mobile: string;
+    city: string;
+    district: {
+        id: number;
+        name: string;
+        name_hindi: string | null;
+    };
+    program: {
+        id: number;
+        name: string;
+        name_hindi: string;
+        price: string;
+    };
+    children: {
+        id: number;
+        name: string;
+        photo: string | null;
+    }[];
+    status: string;
+    created_at: string;
+}
+
 interface AuthContextType {
     user: User | null;
+    parentProfile: ParentProfile | null;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
     signup: (data: any) => Promise<void>;
     updateProfile: (data: any) => Promise<void>;
+    updateUserType: (newType: string) => Promise<void>;
+    refreshProfile: () => Promise<void>;
     logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        checkUser();
-    }, []);
+  useEffect(() => {
+    checkUser();
+  }, []);
 
     const checkUser = async () => {
         try {
             const userData = await AsyncStorage.getItem('user');
-            const token = await AsyncStorage.getItem('userToken');
+            const token = await AsyncStorage.getItem('accessToken');
             if (userData && token) {
-                setUser(JSON.parse(userData));
+                const parsedUser = JSON.parse(userData);
+                setUser(parsedUser);
+                // Also try to refresh profile data if token exists
+                refreshProfile();
             }
         } catch (error) {
             console.error(error);
@@ -53,18 +95,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await axios.post(`${constant.appBaseUrl}/api/auth/login/`, {
-                email,
-                password
+            const formData = new FormData();
+            formData.append('username', email); // Using email as username
+            formData.append('password', password);
+
+            const response = await axios.post(`${constant.appBaseUrl}/api/nanhe-patrakar/login/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                }
             });
             
-            if (response.data.status === 'success') {
-                const { user, tokens } = response.data;
-                // Add mock stats/avatar if missing, to avoid breaking UI that depends on it
-                const userWithStats = {
-                    ...user,
-                    avatar: user.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=400&auto=format&fit=crop',
-                    stats: user.stats || {
+            // Handle the new response structure
+            if (response.data.status === true) {
+                const { access, refresh, user_id, user_type } = response.data.data;
+
+                // Create a user object since the API only returns user_id and user_type
+                const userWithStats: User = {
+                    id: user_id,
+                    user_type: user_type,
+                    name: email.split('@')[0], // Fallback name from email
+                    email: email,
+                    avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=400&auto=format&fit=crop',
+                    stats: {
                         savedNews: 0,
                         savedVideos: 0,
                         savedArticles: 0
@@ -72,48 +124,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 };
                 
                 await AsyncStorage.setItem('user', JSON.stringify(userWithStats));
-                await AsyncStorage.setItem('userToken', tokens.access);
-                await AsyncStorage.setItem('refreshToken', tokens.refresh);
+                await AsyncStorage.setItem('accessToken', access);
+                if (refresh) {
+                    await AsyncStorage.setItem('refreshToken', refresh);
+                }
                 setUser(userWithStats);
             } else {
                 throw new Error(response.data.message || 'Login failed');
             }
         } catch (error: any) {
             console.error('Login error:', error.response?.data || error.message);
-            throw error;
+            const errorMsg = error.response?.data?.message || (typeof error.response?.data === 'string' ? error.response?.data : null) || error.message || 'Login failed';
+            throw new Error(errorMsg);
         }
     };
 
     const signup = async (data: any) => {
         try {
-            const response = await axios.post(`${constant.appBaseUrl}/api/auth/signup/`, data);
+            const payload = {
+                username: data.username,
+                email: data.email,
+                first_name: data.firstName,
+                last_name: data.lastName,
+                password: data.password
+            };
+
+            const response = await axios.post(`${constant.appBaseUrl}/api/register/`, payload, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             
-            if (response.data.status === 'success') {
-                // After signup, we might want to auto-login or just return success
-                // For now, let's assume we redirect to login or auto-login if token was provided (API docs show user data but no token on signup response)
-                // If the API allows immediate login, we would need tokens. 
-                // The provided signup response ONLY has user data, no tokens.
-                // So we probably can't set user session yet unless we strictly trust the signup response or call login automatically.
-                // For better UX, let's just return and let the UI guide them to login or auto-login.
-                
-                // If you want to auto-login, you'd need the password again, which is in `data`.
-                // Let's attempt auto-login for seamless experience if the signup flow allows.
-                if (data.password && data.email) {
-                    await login(data.email, data.password);
+            if (response.status === 200 || response.status === 201 || response.data.status === 'success') {
+                // If the response contains tokens, we can auto-login
+                if (response.data.access || response.data.tokens) {
+                    const resData = response.data;
+                    const tokens = resData.tokens || { access: resData.access, refresh: resData.refresh };
+                    const userData = resData.user || resData;
+
+                    const userWithStats = {
+                        ...userData,
+                        name: userData.name || `${userData.first_name} ${userData.last_name}`.trim() || data.email,
+                        avatar: userData.avatar || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=400&auto=format&fit=crop',
+                        stats: { savedNews: 0, savedVideos: 0, savedArticles: 0 }
+                    };
+
+                await AsyncStorage.setItem('user', JSON.stringify(userWithStats));
+                await AsyncStorage.setItem('accessToken', tokens.access);
+                if (tokens.refresh) await AsyncStorage.setItem('refreshToken', tokens.refresh);
+                setUser(userWithStats);
+                } else if (data.password && data.username) {
+                    // Fallback to manual login if signup was successful but didn't return tokens
+                    // Use username instead of email for login
+                    await login(data.username, data.password);
                 }
             } else {
                 throw new Error(response.data.message || 'Signup failed');
             }
         } catch (error: any) {
             console.error('Signup error:', error.response?.data || error.message);
-            throw error;
+            const errorMsg = error.response?.data?.message || error.response?.data?.detail || JSON.stringify(error.response?.data) || error.message || 'Signup failed';
+            throw new Error(errorMsg);
         }
     };
 
     const logout = async () => {
         try {
             await AsyncStorage.removeItem('user');
-            await AsyncStorage.removeItem('userToken');
+            await AsyncStorage.removeItem('accessToken');
             await AsyncStorage.removeItem('refreshToken');
             setUser(null);
         } catch (error) {
@@ -123,29 +201,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updateProfile = async (data: any) => {
         try {
-            const token = await AsyncStorage.getItem('userToken');
-            if (!token) throw new Error('No access token found');
+            const { updateNormalProfile, updateParentProfile } = require('../api/server');
+            
+            let response;
+            if (user?.user_type === 'nanhe_patrakar') {
+                console.log('🔄 AuthContext: Updating Parent Profile...');
+                response = await updateParentProfile(data);
+            } else {
+                console.log('🔄 AuthContext: Updating Normal User Profile...');
+                response = await updateNormalProfile(data);
+            }
 
-            const response = await axios.post(`${constant.appBaseUrl}/api/auth/update-profile/`, data, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.data.status === 'success') {
-                const updatedData = response.data.data;
-                // Merge updated data with existing user data (preserving stats/avatar if not returned)
-                const currentUser = await AsyncStorage.getItem('user');
-                const parsedUser = currentUser ? JSON.parse(currentUser) : {};
-                
-                const newUser = {
-                    ...parsedUser,
-                    ...updatedData
-                };
-                
-                await AsyncStorage.setItem('user', JSON.stringify(newUser));
-                setUser(newUser);
+            if (response.data && response.data.status) {
+                // Refresh all profile data from server to stay in sync
+                await refreshProfile();
+                return response.data;
             } else {
                 throw new Error(response.data.message || 'Profile update failed');
             }
@@ -155,8 +225,87 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
+    const updateUserType = async (newType: string) => {
+        try {
+            console.log('🔄 AuthContext: Attempting to update user_type to:', newType);
+            
+            // 1. Update AsyncStorage
+            const currentUserStr = await AsyncStorage.getItem('user');
+            if (currentUserStr) {
+                const parsed = JSON.parse(currentUserStr);
+                const updated = { ...parsed, user_type: newType };
+                await AsyncStorage.setItem('user', JSON.stringify(updated));
+            }
+
+            // 2. Update State using functional update to ensure we have latest data
+            setUser((prevUser) => {
+                if (!prevUser) {
+                    // If state was null, maybe we can reconstruct from storage
+                    return prevUser; 
+                }
+                console.log('✅ AuthContext: State updated for user:', prevUser.id);
+                return { ...prevUser, user_type: newType };
+            });
+
+        } catch (error) {
+            console.error('❌ Update UserType Error:', error);
+        }
+    };
+
+    const refreshProfile = async () => {
+        try {
+            console.log('🔄 AuthContext: Refreshing Profile Data...');
+            const { getParentProfile } = require('../api/server');
+            const response = await getParentProfile();
+            
+            console.log('📡 AuthContext: Parent Profile API Response:', JSON.stringify(response.data, null, 2));
+
+            if (response.data && response.data.status) {
+                const data = response.data.data;
+                
+                // Update basic user info
+                const userData = data.user;
+                if (userData) {
+                    const updatedUser: User = {
+                        ...user, // Keep existing fields like avatar/stats if any
+                        id: userData.id,
+                        email: userData.email,
+                        first_name: userData.first_name,
+                        last_name: userData.last_name,
+                        name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
+                        user_type: data.profile_exists ? 'nanhe_patrakar' : user?.user_type
+                    };
+                    console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
+                    setUser(updatedUser);
+                    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                }
+
+                // Update Parent Profile info
+                if (data.profile_exists && data.parent_profile) {
+                    console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
+                    setParentProfile(data.parent_profile);
+                } else {
+                    console.log('ℹ️ AuthContext: No Parent Profile exists for this user.');
+                    setParentProfile(null);
+                }
+            }
+        } catch (error: any) {
+            console.error('❌ AuthContext: Refresh Profile Error:', error.response?.data || error.message);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, signup, logout, updateProfile }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            parentProfile, 
+            isLoading, 
+            login, 
+            signup, 
+            updateProfile, 
+            updateUserType, 
+            refreshProfile, 
+            logout 
+        }}>
             {children}
         </AuthContext.Provider>
     );
