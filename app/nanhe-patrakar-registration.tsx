@@ -67,6 +67,7 @@ export default function NanhePatrakarRegistrationScreen() {
   const [schoolName, setSchoolName] = useState('');
   const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
+  const [selectedGender, setSelectedGender] = useState('M'); // M, F, O
   
   const [guardianName, setGuardianName] = useState(user?.name || '');
   const [guardianPhone, setGuardianPhone] = useState(user?.phone || '');
@@ -79,6 +80,9 @@ export default function NanhePatrakarRegistrationScreen() {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(true);
   const [showDistrictModal, setShowDistrictModal] = useState(false);
   const [districtId, setDistrictId] = useState<string | null>(null);
+  
+  // Validation errors for inline display
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   
   // Track if user is already enrolled on server but payment pending
   const [isEnrolled, setIsEnrolled] = useState(false);
@@ -236,8 +240,8 @@ export default function NanhePatrakarRegistrationScreen() {
     }).catch((error: any) => {
       // handle failure
       console.log(`Error: ${error.code} | ${error.description}`);
-      Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया प्रोफ़ाइल सेक्शन से पुन: प्रयास करें।');
-      router.replace('/profile' as any);
+      Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
+      // Stay on current page instead of redirecting
     });
   };
 
@@ -269,25 +273,24 @@ export default function NanhePatrakarRegistrationScreen() {
         return;
     }
 
-    // 2. Strict Validation restored as requested
-    if (!studentName || !selectedAgeGroup || !schoolName || !district || !city) {
-        Alert.alert('त्रुटि', 'कृपया छात्र की सभी जानकारी भरें।');
-        return;
-    }
-    if (!guardianName || !guardianPhone || guardianPhone.length < 10) {
-        Alert.alert('त्रुटि', 'अभिभावक की सही जानकारी और 10 अंकों का मोबाइल नंबर भरें।');
-        return;
-    }
-    if (!parentIdProof) {
-        Alert.alert('त्रुटि', 'अभिभावक का पहचान पत्र (Parent ID Proof) अपलोड करना अनिवार्य है।');
-        return;
-    }
-    if (!childIdProof) {
-        Alert.alert('त्रुटि', 'बच्चे की फोटो (Child Profile Photo) अपलोड करना अनिवार्य है।');
-        return;
-    }
-    if (!agreeTerms) {
-        Alert.alert('त्रुटि', 'कृपया सहभागिता शर्तों और डिजिटल सहमति को स्वीकार करें।');
+    // 2. Consolidated Validation
+    const validationErrors: string[] = [];
+    if (!studentName) validationErrors.push('• छात्र का नाम');
+    if (!selectedAgeGroup) validationErrors.push('• आयु वर्ग');
+    if (!schoolName) validationErrors.push('• स्कूल का नाम');
+    if (!district) validationErrors.push('• ज़िला');
+    if (!city) validationErrors.push('• शहर/गाँव');
+    if (!guardianName) validationErrors.push('• अभिभावक का नाम');
+    if (!guardianPhone || guardianPhone.length < 10) validationErrors.push('• 10 अंकों का मोबाइल नंबर');
+    if (!parentIdProof) validationErrors.push('• अभिभावक ID Proof');
+    if (!childIdProof) validationErrors.push('• बच्चे की फोटो');
+    if (!agreeTerms) validationErrors.push('• शर्तों की स्वीकृति');
+
+    if (validationErrors.length > 0) {
+        Alert.alert(
+            'कुछ जानकारी अधूरी है', 
+            `कृपया ये भरें:\n\n${validationErrors.join('\n')}`
+        );
         return;
     }
 
@@ -295,16 +298,23 @@ export default function NanhePatrakarRegistrationScreen() {
     try {
         const d_id = districtId || "1";
 
+        // Calculate approximate DOB based on age group
+        const currentYear = new Date().getFullYear();
+        let birthYear = currentYear - 9; // Default for Group A
+        if (selectedAgeGroup === 'B') birthYear = currentYear - 12;
+        else if (selectedAgeGroup === 'C') birthYear = currentYear - 15;
+        const calculatedDOB = `${birthYear}-06-15`; // Mid-year approximation
+
         const payload: any = {
             mobile: guardianPhone,
             city: city,
             district_id: d_id, 
             terms_accepted: "true",
             child_name: studentName,
-            child_date_of_birth: "2015-05-15", 
+            child_date_of_birth: calculatedDOB, 
             child_age: selectedAgeGroup === 'A' ? "9" : selectedAgeGroup === 'B' ? "12" : "15",
             child_district_id: d_id,
-            child_gender: "M", 
+            child_gender: selectedGender, 
             child_school_name: schoolName,
         };
 
@@ -583,7 +593,34 @@ export default function NanhePatrakarRegistrationScreen() {
                 ))}
             </View>
 
-            {/* --- Section 3: Guardian --- */}
+            {/* --- Gender Selection --- */}
+            <View style={styles.sectionSpacer} />
+            <Text style={[styles.sectionHeading, { color: theme.text }]}>2.5 लिंग (Gender)</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
+                {[
+                    { id: 'M', label: 'लड़का (Male)', icon: 'male' },
+                    { id: 'F', label: 'लड़की (Female)', icon: 'female' },
+                    { id: 'O', label: 'अन्य (Other)', icon: 'person' }
+                ].map((g) => (
+                    <TouchableOpacity
+                        key={g.id}
+                        onPress={() => setSelectedGender(g.id)}
+                        style={{
+                            flex: 1,
+                            padding: 12,
+                            borderRadius: 12,
+                            borderWidth: 1.5,
+                            borderColor: selectedGender === g.id ? theme.primary : theme.borderColor,
+                            backgroundColor: selectedGender === g.id ? theme.primary + '15' : theme.background,
+                            alignItems: 'center',
+                            gap: 4
+                        }}
+                    >
+                        <Ionicons name={g.icon as any} size={20} color={selectedGender === g.id ? theme.primary : theme.placeholderText} />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: selectedGender === g.id ? theme.primary : theme.text }}>{g.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
             <View style={styles.sectionSpacer} />
             <Text style={[styles.sectionHeading, { color: theme.text }]}>3. अभिभावक का विवरण</Text>
             <View style={[styles.card, { backgroundColor: theme.background, borderColor: theme.borderColor }]}>

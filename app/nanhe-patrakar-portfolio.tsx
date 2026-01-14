@@ -146,8 +146,8 @@ export default function NanhePatrakarPortfolioScreen() {
             }
         }).catch((error: any) => {
             console.log(`Error: ${error.code} | ${error.description}`);
-            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया प्रोफ़ाइल सेक्शन से पुन: प्रयास करें।');
-            router.replace('/profile' as any);
+            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
+            // Stay on portfolio page instead of redirecting to profile
         });
     };
 
@@ -300,6 +300,22 @@ export default function NanhePatrakarPortfolioScreen() {
                         </View>
                     </View>
                 </View>
+            </View>
+        );
+    }
+
+    // Safety check: If paid but no childProfile loaded yet, show loading
+    if (!childProfile) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={{ marginTop: 10, color: theme.text }}>प्रोफ़ाइल डेटा लोड हो रहा है...</Text>
+                <TouchableOpacity 
+                    onPress={() => fetchPortfolioData()}
+                    style={{ marginTop: 20, padding: 12, backgroundColor: theme.primary + '15', borderRadius: 10 }}
+                >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>पुनः प्रयास करें</Text>
+                </TouchableOpacity>
             </View>
         );
     }

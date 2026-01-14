@@ -274,7 +274,17 @@ export default function NanhePatrakarSubmissionScreen() {
         if (!title.trim()) { Alert.alert("शीर्षक खाली है", "कृपया खबर का शीर्षक लिखें।"); return; }
         if (!content.trim()) { Alert.alert("सामग्री खाली है", "कृपया कुछ शब्द लिखें।"); return; }
         if (!selectedTopic) { Alert.alert("विषय चुनें", "कृपया एक विषय चुनें।"); return; }
-        if (!childId) { Alert.alert("त्रुटि", "बच्चे की प्रोफाइल नहीं मिली।"); return; }
+        if (!childId) { 
+            Alert.alert(
+                "त्रुटि", 
+                "बच्चे की प्रोफाइल नहीं मिली। कृपया पहले रजिस्ट्रेशन पूरा करें।",
+                [
+                    { text: "रजिस्ट्रेशन करें", onPress: () => router.push('/nanhe-patrakar-registration' as any) },
+                    { text: "बंद करें", style: "cancel" }
+                ]
+            ); 
+            return; 
+        }
 
         try {
             setIsSubmitting(true);
@@ -358,7 +368,7 @@ export default function NanhePatrakarSubmissionScreen() {
                     
                     <Text style={[styles.sectionLabel, { color: theme.text }]}>विषय (Topic) चुनें</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalList} contentContainerStyle={{ gap: 10, paddingRight: 40 }}>
-                        {Array.isArray(topics) && topics.map((t) => (
+                        {Array.isArray(topics) && topics.length > 0 ? topics.map((t) => (
                             <TouchableOpacity 
                                 key={t.id} 
                                 onPress={() => setSelectedTopic(t.id.toString())}
@@ -366,7 +376,11 @@ export default function NanhePatrakarSubmissionScreen() {
                             >
                                 <Text style={[styles.chipText, { color: selectedTopic === t.id.toString() ? '#fff' : theme.text }]}>{t.title_hindi || t.title}</Text>
                             </TouchableOpacity>
-                        ))}
+                        )) : (
+                            <View style={{ padding: 15, backgroundColor: theme.primary + '10', borderRadius: 10 }}>
+                                <Text style={{ color: theme.placeholderText, fontSize: 13 }}>कोई विषय उपलब्ध नहीं है। कृपया बाद में प्रयास करें।</Text>
+                            </View>
+                        )}
                     </ScrollView>
 
                     <Text style={[styles.sectionLabel, { color: theme.text, marginTop: 20 }]}>माध्यम (Type)</Text>
