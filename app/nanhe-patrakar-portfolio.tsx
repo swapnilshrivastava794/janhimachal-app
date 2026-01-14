@@ -218,23 +218,88 @@ export default function NanhePatrakarPortfolioScreen() {
         );
     }
 
-    if (!childProfile) {
+    if (!isPaid) {
         return (
-            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
-                <Ionicons name="alert-circle-outline" size={64} color={theme.placeholderText} />
-                <Text style={{ color: theme.text, fontSize: 18, marginTop: 15, textAlign: 'center', fontWeight: 'bold' }}>
-                    कोई सक्रिय नन्हा पत्रकार प्रोफ़ाइल नहीं मिली
-                </Text>
-                <Text style={{ color: theme.placeholderText, textAlign: 'center', marginTop: 10 }}>
-                    पोर्टफोलियो और प्रमाण पत्र देखने के लिए कृपया रजिस्ट्रेशन प्रक्रिया पूरी करें।
-                    {'\n'}यदि आपने रजिस्ट्रेशन कर लिया है, तो कृपया भुगतान (Payment) पूरा करें।
-                </Text>
-                <TouchableOpacity 
-                    onPress={() => router.push('/nanhe-patrakar-registration' as any)}
-                    style={[styles.authLoginBtn, { backgroundColor: theme.primary, marginTop: 25, width: '80%' }]}
-                >
-                    <Text style={styles.authLoginBtnText}>रजिस्ट्रेशन / भुगतान पूरा करें</Text>
-                </TouchableOpacity>
+            <View style={[styles.container, { backgroundColor: theme.background, paddingTop: STATUSBAR_HEIGHT }]}>
+                <Stack.Screen options={{ headerShown: false }} />
+                <StatusBar barStyle={colorScheme === 'dark' ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+
+                <View style={[styles.header, { borderBottomColor: theme.borderColor }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={28} color={theme.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>नन्हा पत्रकार प्रोफ़ाइल</Text>
+                    <View style={{ width: 28 }} />
+                </View>
+
+                <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
+                    {/* Marketing Preview for Unpaid Users - Centered */}
+                    <View style={{  marginBottom: 40,  backgroundColor: '#FFFDF5', borderRadius: 16, borderWidth: 1, borderColor: '#FFEEBA', overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 }}>
+                        {/* Urgency Badge */}
+                        <View style={{ backgroundColor: '#FF8C00', paddingVertical: 6, alignItems: 'center' }}>
+                            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 }}>
+                                🔥 सीमित अवसर: अगले 50 सफल रजिस्ट्रेशन के लिए 'Star Reporter' बैच!
+                            </Text>
+                        </View>
+
+                        <View style={{ padding: 18 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                                <View style={{ backgroundColor: '#FFF3CD', padding: 8, borderRadius: 10 }}>
+                                    <Ionicons name="alert-circle" size={24} color="#856404" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: '#1A1A1A', fontWeight: '900', fontSize: 17 }}>आपका भुगतान पेंडिंग है</Text>
+                                    <Text style={{ fontSize: 12, color: '#856404', marginTop: 2 }}>पंजीकरण पूरा करने के लिए भुगतान अनिवार्य है</Text>
+                                </View>
+                            </View>
+
+                            <Text style={{ color: '#666', textAlign: 'center', marginBottom: 20, fontSize: 13, lineHeight: 18 }}>
+                                अपने पोर्टफोलियो और प्रमाण पत्र को अनलॉक करने के लिए रजिस्ट्रेशन प्रक्रिया पूरी करें।
+                            </Text>
+
+                            {/* Preview Section - Locked ID & Certificate */}
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#1A1A1A', marginBottom: 10, textTransform: 'uppercase' }}>अनलॉक होने के लिए तैयार:</Text>
+                            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+                                <View style={{ flex: 1, height: 100, backgroundColor: '#f8f9fa', borderRadius: 12, borderWidth: 1, borderColor: '#ddd', overflow: 'hidden', position: 'relative' }}>
+                                    <View style={{ padding: 8, opacity: 0.1 }}>
+                                        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#ccc' }} />
+                                        <View style={{ height: 6, backgroundColor: '#ccc', marginTop: 10, width: '80%', borderRadius: 3 }} />
+                                        <View style={{ height: 15, backgroundColor: '#E31E24', marginTop: 10, borderRadius: 4, width: '100%' }} />
+                                    </View>
+                                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+                                        <Ionicons name="lock-closed" size={24} color="#856404" />
+                                        <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#856404', marginTop: 4 }}>प्रेस आईडी कार्ड</Text>
+                                    </View>
+                                </View>
+
+                                <View style={{ flex: 1, height: 100, backgroundColor: '#fdfcfb', borderRadius: 12, borderWidth: 1, borderColor: '#D4AF37', borderStyle: 'dotted', overflow: 'hidden', position: 'relative' }}>
+                                    <View style={{ padding: 10, alignItems: 'center', opacity: 0.1 }}>
+                                        <Ionicons name="ribbon" size={20} color="#D4AF37" />
+                                        <View style={{ height: 5, backgroundColor: '#D4AF37', marginTop: 8, width: '70%', borderRadius: 2 }} />
+                                    </View>
+                                    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+                                        <Ionicons name="lock-closed" size={24} color="#D4AF37" />
+                                        <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#D4AF37', marginTop: 4 }}>प्रमाण-पत्र</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <TouchableOpacity 
+                                onPress={handlePayment}
+                                style={{ backgroundColor: '#856404', paddingVertical: 14, borderRadius: 12, alignItems: 'center', elevation: 4 }}
+                            >
+                                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>भुगतान करें और अनलॉक करें</Text>
+                            </TouchableOpacity>
+
+                            <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: '#FFEEBA', paddingTop: 12, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                <Ionicons name="shield-checkmark" size={14} color="#28a745" />
+                                <Text style={{ fontSize: 10, color: '#666', flex: 1 }}>
+                                    यह शुल्क आपके आईडी कार्ड, सर्टिफिकेट और क्लाउड सर्वर सेवाओं के लिए है।
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
             </View>
         );
     }
@@ -257,44 +322,6 @@ export default function NanhePatrakarPortfolioScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                {/* Payment Pending Warning */}
-                {!isPaid && (
-                <View style={{ marginBottom: 20, backgroundColor: '#FFF3CD', borderRadius: 12, borderWidth: 1, borderColor: '#FFEEBA', overflow: 'hidden' }}>
-                    {/* Urgency Badge */}
-                    <View style={{ backgroundColor: '#FF8C00', paddingVertical: 4, alignItems: 'center' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 }}> 🔥 सीमित अवसर: अगले 50  रजिस्ट्रेशन के लिए 'Star Reporter' बैच!</Text>
-                    </View>
-
-                    <View style={{ padding: 15 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                            <Ionicons name="warning" size={22} color="#856404" />
-                            <Text style={{ color: '#856404', fontWeight: 'bold', flex: 1, fontSize: 15 }}>
-                                आपका भुगतान (Payment) पेंडिंग है।
-                            </Text>
-                        </View>
-                        
-                        <Text style={{ fontSize: 12, color: '#856404', marginBottom: 15, lineHeight: 18 }}>
-                            कृपया अपनी समाचार भेजने की सुविधा और आईडी एक्टिवेट करने के लिए भुगतान पूरा करें।
-                        </Text>
-
-                        <TouchableOpacity 
-                            onPress={handlePayment}
-                            style={{ backgroundColor: '#856404', paddingVertical: 12, borderRadius: 10, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}
-                        >
-                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>भुगतान पूरा करें (Complete Payment)</Text>
-                        </TouchableOpacity>
-
-                        {/* Transparency Text */}
-                        <View style={{ marginTop: 12, flexDirection: 'row', gap: 5, alignItems: 'center', opacity: 0.8 }}>
-                            <Ionicons name="information-circle-outline" size={14} color="#856404" />
-                            <Text style={{ fontSize: 10, color: '#856404', flex: 1 }}>
-                                यह शुल्क आपके प्रोफेशनल आईडी कार्ड, क्लाउड सर्वर और ट्रेनिंग सामग्री के लिए लिया जाता है।
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-                )}
-
                 <View style={[styles.profileCard, { backgroundColor: (theme as any).card || theme.background, borderColor: theme.borderColor }]}>
                     <View style={styles.profileTop}>
                         <View style={styles.avatarContainer}>

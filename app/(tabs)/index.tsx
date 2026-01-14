@@ -1,7 +1,8 @@
-import { getNews } from '@/api/server';
+import { getNews, getSubmissions } from '@/api/server';
 import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useCategory } from '@/context/CategoryContext';
@@ -10,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [popularNews, setPopularNews] = useState<any[]>([]);
   const [articlesData, setArticlesData] = useState<any[]>([]);
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
+  const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
@@ -103,7 +105,11 @@ export default function HomeScreen() {
       });
       const mixedNews = Array.from(mixedMap.values());
       
-      setBreakingSectionNews(mixedNews);
+      // Fetch Nanhe Patrakar Spotlight Stories
+      const nanheRes = await getSubmissions({ status: 'Approved', limit: 5 });
+      if (nanheRes.data && nanheRes.data.status) {
+          setNanhePatrakarStories(nanheRes.data.data.results || []);
+      }
 
     } catch (e) {
       console.log('Error fetching home data:', e);
@@ -126,7 +132,7 @@ export default function HomeScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       
-      {/* Dynamic Nanhe Patrakar Hub Banner */}
+      {/* Cinematic Nanhe Patrakar Dash Banner */}
       <TouchableOpacity 
         activeOpacity={0.9}
         onPress={() => {
@@ -138,38 +144,106 @@ export default function HomeScreen() {
                 router.push('/nanhe-patrakar-portfolio' as any);
             }
         }}
-        style={{ margin: 16, marginBottom: 8, borderRadius: 16, overflow: 'hidden', elevation: 4, shadowColor: '#E31E24', shadowOffset: {width:0, height:4}, shadowOpacity: 0.3, shadowRadius: 8 }}
+        style={{ margin: 16, marginBottom: 8, borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#E31E24', shadowOffset: {width:0, height:6}, shadowOpacity: 0.4, shadowRadius: 12 }}
       >
         <LinearGradient
-            colors={isNanhePatrakar ? ['#1A237E', '#0D47A1'] : ['#E31E24', '#B71C1C']}
+            colors={isNanhePatrakar ? ['#1e3c72', '#2a5298'] : ['#E31E24', '#8E0E00']}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
             <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
-                            {isNanhePatrakar ? 'MY HUB' : 'NEW'}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 }}>
+                        <Text style={{ color: '#000', fontSize: 11, fontWeight: '900' }}>
+                            {isNanhePatrakar ? 'MY DASHBOARD' : 'VOICE OF HIMACHAL'}
                         </Text>
                     </View>
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>नन्हे पत्रकार</Text>
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' }}>
+                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 }}>नन्हे पत्रकार</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginTop: 4 }}>
                     {isNanhePatrakar 
-                        ? 'अपना पोर्टफोलियो और प्रमाण पत्र देखें' 
-                        : 'हिमाचल के बच्चों की नई आवाज़ • अभी जुड़ें'}
+                        ? 'अपना पोर्टफोलियो और आईडी कार्ड देखें' 
+                        : 'क्या आपके बच्चे में है एक न्यूज़ रिपोर्टर?'}
                 </Text>
             </View>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
                 <Ionicons 
-                    name={isNanhePatrakar ? "person-circle" : "arrow-forward"} 
-                    size={24} 
-                    color="#fff" 
+                    name={isNanhePatrakar ? "id-card" : "mic-outline"} 
+                    size={26} 
+                    color="#FFD700" 
                 />
             </View>
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Impact Stats Section */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
+          <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>5,000+</Text>
+              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>सक्रिय पत्रकार</Text>
+          </View>
+          <View style={{ width: 1, height: '80%', backgroundColor: theme.borderColor, alignSelf: 'center' }} />
+          <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>10,000+</Text>
+              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>खबरें प्रकाशित</Text>
+          </View>
+          <View style={{ width: 1, height: '80%', backgroundColor: theme.borderColor, alignSelf: 'center' }} />
+          <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>50+</Text>
+              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>ज़िले कवर</Text>
+          </View>
+      </View>
+
+      {/* Nanhe Patrakar Spotlight Section */}
+      {nanhePatrakarStories.length > 0 && (
+          <View style={[styles.sectionContainer, { marginBottom: 30 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 15 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: theme.primary, width: 4, height: 20, borderRadius: 2 }} />
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>नन्हे पत्रकारों की कलम से</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => router.push('/nanhe-patrakar-hub' as any)}>
+                      <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 12 }}>View Hub</Text>
+                  </TouchableOpacity>
+              </View>
+
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 8 }}
+              >
+                  {nanhePatrakarStories.map((story) => {
+                      const storyImg = story.media_files?.[0]?.file ? (story.media_files[0].file.startsWith('http') ? story.media_files[0].file : `${constant.appBaseUrl}${story.media_files[0].file}`) : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=300';
+                      return (
+                          <TouchableOpacity 
+                            key={story.id}
+                            onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: story.id } } as any)}
+                            style={{ width: width * 0.7, marginHorizontal: 8, backgroundColor: theme.card, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: theme.borderColor }}
+                          >
+                              <View style={{ position: 'relative' }}>
+                                  <Image source={{ uri: storyImg }} style={{ width: '100%', height: 140 }} />
+                                  <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                      <Ionicons name="eye-outline" size={12} color="#fff" />
+                                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{story.views || 0}</Text>
+                                  </View>
+                              </View>
+                              <View style={{ padding: 12 }}>
+                                  <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '800', marginBottom: 4 }}>{story.topic_title_hindi?.toUpperCase() || 'TOPIC'}</Text>
+                                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800', marginBottom: 8 }} numberOfLines={2}>{story.title}</Text>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: 1, borderTopColor: theme.borderColor, paddingTop: 8 }}>
+                                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '20', alignItems: 'center', justifyContent: 'center' }}>
+                                          <Ionicons name="person" size={14} color={theme.primary} />
+                                      </View>
+                                      <Text style={{ color: theme.placeholderText, fontSize: 11, fontWeight: '700' }}>By {story.child_name || 'Nanha Patrakar'}</Text>
+                                  </View>
+                              </View>
+                          </TouchableOpacity>
+                      );
+                  })}
+              </ScrollView>
+          </View>
+      )}
 
       {/* 1. Top Stories Section */}
       <View style={styles.sectionContainer}>

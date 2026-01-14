@@ -452,17 +452,13 @@ export default function NanhePatrakarSubmissionScreen() {
                         
                         <TouchableOpacity 
                             style={[styles.payBtn, { backgroundColor: theme.primary }]}
-                            onPress={handlePayment}
-                            disabled={isLoading}
+                            onPress={() => {
+                                setShowPaymentModal(false);
+                                router.push('/nanhe-patrakar-portfolio' as any);
+                            }}
                         >
-                            {isLoading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <>
-                                    <Text style={styles.payBtnText}>अभी भुगतान करें (Pay Now)</Text>
-                                    <Ionicons name="card" size={18} color="#fff" />
-                                </>
-                            )}
+                            <Text style={styles.payBtnText}>पोर्टफोलियो और भुगतान पर जाएं</Text>
+                            <Ionicons name="arrow-forward" size={18} color="#fff" />
                         </TouchableOpacity>
 
                         <TouchableOpacity 
