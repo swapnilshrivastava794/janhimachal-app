@@ -3,6 +3,7 @@ import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useCategory } from '@/context/CategoryContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { selectedSubcategoryId, selectedCategoryName } = useCategory();
+  const { user } = useAuth();
+  
   const [topStories, setTopStories] = useState<any[]>([]);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [topPicks, setTopPicks] = useState<any[]>([]);
@@ -24,6 +27,8 @@ export default function HomeScreen() {
   const [articlesData, setArticlesData] = useState<any[]>([]);
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
   useEffect(() => {
     fetchData();
@@ -40,8 +45,6 @@ export default function HomeScreen() {
               const data = res.results || res || [];
               if (data.length > 0) return data;
               
-              // Fallback to simple latest news if primary yields simplified results
-              // Keeping the same subcategory_id
               const fallbackRes = await getNews({ 
                   subcategory_id: selectedSubcategoryId, 
                   latest: '1', 
@@ -50,7 +53,6 @@ export default function HomeScreen() {
               return fallbackRes.results || fallbackRes || [];
           } catch (e) {
               console.log("Section fetch error, trying fallback", e);
-              // One last try on error
               const fallbackRes = await getNews({ 
                   subcategory_id: selectedSubcategoryId, 
                   latest: '1', 
@@ -60,42 +62,33 @@ export default function HomeScreen() {
           }
       };
 
-      // 1. Top Stories (Primary Feed)
-      // For Top Stories, the default call is effectively latest, so usually no fallback needed unless we want to strip subcategory?
-      // But let's safeguard it with a direct call.
       const topRes = await getNews({ subcategory_id: selectedSubcategoryId, limit: 10 });
       setTopStories(topRes.results || topRes || []);
 
-      // 2. Recent Posts
       const recentData = await fetchSectionData(
           { subcategory_id: selectedSubcategoryId, latest: '1', headlines: '1', limit: 5 }, 
           5
       );
       setRecentPosts(recentData);
 
-      // 3. Top Picks (Trending)
       const trendingData = await fetchSectionData(
           { subcategory_id: selectedSubcategoryId, trending: '1', limit: 5 },
           5
       );
       setTopPicks(trendingData);
 
-      // 4. Popular News (Headlines + Trending)
       const popularData = await fetchSectionData(
           { subcategory_id: selectedSubcategoryId, headlines: '1', trending: '1', limit: 5 },
           5
       );
       setPopularNews(popularData);
 
-      // 5. Articles
       const articlesSectionData = await fetchSectionData(
           { subcategory_id: selectedSubcategoryId, articles: '1', trending: '1', latest: '1', limit: 10 },
           10
       );
       setArticlesData(articlesSectionData);
 
-      // 6. Fetch Breaking Section (Latest + Trending Mixed)
-      // Fetch both parallely
       const [latestMixRes, trendingMixRes] = await Promise.all([
           getNews({ subcategory_id: selectedSubcategoryId, latest: '1', limit: 4 }),
           getNews({ subcategory_id: selectedSubcategoryId, trending: '1', limit: 4 })
@@ -104,7 +97,6 @@ export default function HomeScreen() {
       const latestItems = latestMixRes.results || latestMixRes || [];
       const trendingItems = trendingMixRes.results || trendingMixRes || [];
       
-      // Merge and Deduplicate by ID
       const mixedMap = new Map();
       [...latestItems, ...trendingItems].forEach(item => {
           mixedMap.set(item.id, item);
@@ -128,23 +120,28 @@ export default function HomeScreen() {
     if (!dateString) return "JUST NOW";
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    // Format: "30 Dec 2025"
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Web Stories Section */}
-      {/* <WebStories /> */}
       
-      {/* Nanhe Patrakar Promo Banner */}
+      {/* Dynamic Nanhe Patrakar Hub Banner */}
       <TouchableOpacity 
         activeOpacity={0.9}
-        onPress={() => router.push('/nanhe-patrakar' as any)}
+        onPress={() => {
+            if (!user) {
+                router.push('/auth/login' as any);
+            } else if (!isNanhePatrakar) {
+                router.push('/nanhe-patrakar-registration' as any);
+            } else {
+                router.push('/nanhe-patrakar-portfolio' as any);
+            }
+        }}
         style={{ margin: 16, marginBottom: 8, borderRadius: 16, overflow: 'hidden', elevation: 4, shadowColor: '#E31E24', shadowOffset: {width:0, height:4}, shadowOpacity: 0.3, shadowRadius: 8 }}
       >
         <LinearGradient
-            colors={['#E31E24', '#B71C1C']}
+            colors={isNanhePatrakar ? ['#1A237E', '#0D47A1'] : ['#E31E24', '#B71C1C']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
@@ -152,19 +149,28 @@ export default function HomeScreen() {
             <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>NEW</Text>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>
+                            {isNanhePatrakar ? 'MY HUB' : 'NEW'}
+                        </Text>
                     </View>
                     <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800' }}>नन्हे पत्रकार</Text>
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' }}>हिमाचल के बच्चों की नई आवाज़ • भाग लें</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' }}>
+                    {isNanhePatrakar 
+                        ? 'अपना पोर्टफोलियो और प्रमाण पत्र देखें' 
+                        : 'हिमाचल के बच्चों की नई आवाज़ • अभी जुड़ें'}
+                </Text>
             </View>
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="arrow-forward" size={24} color="#fff" />
+                <Ionicons 
+                    name={isNanhePatrakar ? "person-circle" : "arrow-forward"} 
+                    size={24} 
+                    color="#fff" 
+                />
             </View>
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* 1. Top Stories Section */}
       {/* 1. Top Stories Section */}
       <View style={styles.sectionContainer}>
         <SectionHeader 
@@ -260,7 +266,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* 4. Popular News Section - Only show if loading or if data exists */}
+      {/* 4. Popular News Section */}
       {(isLoading || popularNews.length > 0) && (
       <View style={styles.sectionContainer}>
         <SectionHeader title="Popular News" onViewAll={() => handleViewAll('Popular News', 'popular')} />

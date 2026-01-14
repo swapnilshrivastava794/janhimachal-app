@@ -87,8 +87,10 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (user) {
         setUsername(user.username || '');
-        setFirstName(user.first_name || '');
-        setLastName(user.last_name || '');
+        // Fallback to splitting user.name if first/last are missing
+        const nameParts = (user.name || '').split(' ');
+        setFirstName(user.first_name || nameParts[0] || '');
+        setLastName(user.last_name || nameParts.slice(1).join(' ') || '');
         setEmail(user.email || '');
     }
     if (parentProfile) {
@@ -100,8 +102,9 @@ export default function ProfileScreen() {
         }
         if (parentProfile.user) {
             setUsername(parentProfile.user.username || username);
-            setFirstName(parentProfile.user.first_name || firstName);
-            setLastName(parentProfile.user.last_name || lastName);
+            const pNameParts = (parentProfile.user.first_name || '').trim() ? [] : (parentProfile.user.username || '').split(' ');
+            setFirstName(parentProfile.user.first_name || firstName || pNameParts[0] || '');
+            setLastName(parentProfile.user.last_name || lastName || pNameParts.slice(1).join(' ') || '');
             setEmail(parentProfile.user.email || email);
         }
     }
@@ -187,7 +190,9 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
                 </View>
                 <View style={styles.userMeta}>
-                    <Text style={styles.userName}>{firstName} {lastName}</Text>
+                    <Text style={styles.userName}>
+                        {(firstName || lastName) ? `${firstName} ${lastName}`.trim() : (user.name || user.username || 'User')}
+                    </Text>
                     <View style={styles.userRoleTag}>
                         <Ionicons name={isNanhePatrakar ? "shield-checkmark" : "person"} size={12} color="#E31E24" />
                         <Text style={styles.userRoleText}>

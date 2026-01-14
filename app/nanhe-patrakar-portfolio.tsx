@@ -1,4 +1,4 @@
-import { getMyChildProfiles, getSubmissions } from '@/api/server';
+import { createRazorpayOrder, getMyChildProfiles, getSubmissionStats, getSubmissions, verifyRazorpayPayment } from '@/api/server';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -10,6 +10,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Dimensions,
     Image,
     Platform,
@@ -20,25 +21,37 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
 
 export default function NanhePatrakarPortfolioScreen() {
-    const { user, isLoading: authLoading } = useAuth();
+    const { user, parentProfile, isLoading: authLoading, refreshProfile } = useAuth();
+    const insets = useSafeAreaInsets();
     const router = useRouter();
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
 
     const [childProfile, setChildProfile] = useState<any>(null);
     const [myStories, setMyStories] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isPaid, setIsPaid] = useState(false); // Local state to hide banner after payment
 
     useEffect(() => {
         if (user) {
             fetchPortfolioData();
+            // Also check parentProfile status from Context
+            if (parentProfile?.status === 'PAYMENT_COMPLETED') {
+                setIsPaid(true);
+            }
+        } else if (!authLoading) {
+            // If auth is done and no user found, stop portfolio loading
+            setIsLoading(false);
         }
-    }, [user]);
+    }, [user, authLoading, parentProfile]);
 
     const fetchPortfolioData = async () => {
         try {
@@ -48,13 +61,111 @@ export default function NanhePatrakarPortfolioScreen() {
                 const profile = profileRes.data.data.results[0];
                 setChildProfile(profile);
 
+                // Auto-set isPaid if status from server is already completed
+                if (profile.payment_status === 'PAYMENT_COMPLETED' || 
+                    profile.status === 'PAYMENT_COMPLETED' ||
+                    profile.payment_status === 'SUCCESS' || 
+                    profile.is_paid === true ||
+                    parentProfile?.status === 'PAYMENT_COMPLETED') {
+                    setIsPaid(true);
+                }
+
+                // Fetch Stories
                 const submissionsRes = await getSubmissions({ child_id: profile.id });
                 if (submissionsRes.data && submissionsRes.data.status) {
                     setMyStories(submissionsRes.data.data.results);
                 }
+
+                // Fetch Real Stats
+                try {
+                    const statsRes = await getSubmissionStats();
+                    if (statsRes.data && statsRes.data.status) {
+                        setStats(statsRes.data.data);
+                    }
+                } catch (statsErr) {
+                    console.log("Stats API not fully ready yet, using defaults");
+                }
             }
         } catch (error) {
             console.error("Error fetching portfolio data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const startPayment = (orderData: any) => {
+        const rzpOrderId = orderData?.id || orderData?.razorpay_order_id;
+        if (!rzpOrderId) {
+            console.error("❌ Order ID missing. Received:", JSON.stringify(orderData));
+            Alert.alert("Error", "Invalid Order Data received from server.");
+            return;
+        }
+        const options = {
+            description: 'Nanhe Patrakar Registration',
+            image: 'https://janhimachal.com/static/img/logo.png',
+            currency: 'INR',
+            key: constant.razorpayKeyId?.trim(),
+            amount: orderData.amount, // amount should be in paise
+            name: 'Jan Himachal',
+            order_id: rzpOrderId,
+            prefill: {
+                email: user?.email || 'help@janhimachal.com',
+                contact: user?.phone || '',
+                name: user?.name || ''
+            },
+            theme: { color: theme.primary }
+        };
+
+        RazorpayCheckout.open(options).then(async (data: any) => {
+            console.log(`Payment Success: ${data.razorpay_payment_id}`);
+            try {
+                const verifyPayload = {
+                    razorpay_order_id: data.razorpay_order_id,
+                    razorpay_payment_id: data.razorpay_payment_id,
+                    razorpay_signature: data.razorpay_signature
+                };
+                
+                const verifyRes = await verifyRazorpayPayment(verifyPayload);
+
+                if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
+                    Alert.alert('Payment Successful', 'आपका भुगतान सफल रहा!');
+                    setIsPaid(true); // Hide banner
+                    await refreshProfile(); // Update Context
+                    fetchPortfolioData();   // Update UI
+                } else {
+                    Alert.alert('Processing', 'Payment received. Verifying status...');
+                    setIsPaid(true); // Hide banner assuming success
+                    await refreshProfile();
+                    fetchPortfolioData();
+                }
+            } catch (verifyErr: any) {
+                console.error('Verify Error:', verifyErr);
+                Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है।');
+                setIsPaid(true);
+                fetchPortfolioData();
+            }
+        }).catch((error: any) => {
+            console.log(`Error: ${error.code} | ${error.description}`);
+            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया प्रोफ़ाइल सेक्शन से पुन: प्रयास करें।');
+            router.replace('/profile' as any);
+        });
+    };
+
+
+    const handlePayment = async () => {
+        setIsLoading(true);
+        try {
+            console.log("🚀 Starting Direct Payment from Portfolio...");
+            const orderResponse = await createRazorpayOrder();
+            if (orderResponse.data && orderResponse.data.status) {
+                const orderData = orderResponse.data.data || orderResponse.data;
+                startPayment(orderData);
+            } else {
+                Alert.alert('Error', orderResponse.data?.message || 'Failed to create order');
+            }
+        } catch (err: any) {
+            console.error(err);
+            Alert.alert('Error', 'Payment initiation failed. Are you sure you are enrolled?');
         } finally {
             setIsLoading(false);
         }
@@ -68,6 +179,8 @@ export default function NanhePatrakarPortfolioScreen() {
             </View>
         );
     }
+    
+
 
     if (!user) {
         return (
@@ -113,13 +226,14 @@ export default function NanhePatrakarPortfolioScreen() {
                     कोई सक्रिय नन्हा पत्रकार प्रोफ़ाइल नहीं मिली
                 </Text>
                 <Text style={{ color: theme.placeholderText, textAlign: 'center', marginTop: 10 }}>
-                    पोर्टफोलियो और प्रमाण पत्र देखने के लिए कृपया पहले रजिस्ट्रेशन प्रक्रिया पूरी करें।
+                    पोर्टफोलियो और प्रमाण पत्र देखने के लिए कृपया रजिस्ट्रेशन प्रक्रिया पूरी करें।
+                    {'\n'}यदि आपने रजिस्ट्रेशन कर लिया है, तो कृपया भुगतान (Payment) पूरा करें।
                 </Text>
                 <TouchableOpacity 
                     onPress={() => router.push('/nanhe-patrakar-registration' as any)}
                     style={[styles.authLoginBtn, { backgroundColor: theme.primary, marginTop: 25, width: '80%' }]}
                 >
-                    <Text style={styles.authLoginBtnText}>रजिस्ट्रेशन करें</Text>
+                    <Text style={styles.authLoginBtnText}>रजिस्ट्रेशन / भुगतान पूरा करें</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -143,6 +257,44 @@ export default function NanhePatrakarPortfolioScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                {/* Payment Pending Warning */}
+                {!isPaid && (
+                <View style={{ marginBottom: 20, backgroundColor: '#FFF3CD', borderRadius: 12, borderWidth: 1, borderColor: '#FFEEBA', overflow: 'hidden' }}>
+                    {/* Urgency Badge */}
+                    <View style={{ backgroundColor: '#FF8C00', paddingVertical: 4, alignItems: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 0.5 }}> 🔥 सीमित अवसर: अगले 50  रजिस्ट्रेशन के लिए 'Star Reporter' बैच!</Text>
+                    </View>
+
+                    <View style={{ padding: 15 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                            <Ionicons name="warning" size={22} color="#856404" />
+                            <Text style={{ color: '#856404', fontWeight: 'bold', flex: 1, fontSize: 15 }}>
+                                आपका भुगतान (Payment) पेंडिंग है।
+                            </Text>
+                        </View>
+                        
+                        <Text style={{ fontSize: 12, color: '#856404', marginBottom: 15, lineHeight: 18 }}>
+                            कृपया अपनी समाचार भेजने की सुविधा और आईडी एक्टिवेट करने के लिए भुगतान पूरा करें।
+                        </Text>
+
+                        <TouchableOpacity 
+                            onPress={handlePayment}
+                            style={{ backgroundColor: '#856404', paddingVertical: 12, borderRadius: 10, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}
+                        >
+                            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>भुगतान पूरा करें (Complete Payment)</Text>
+                        </TouchableOpacity>
+
+                        {/* Transparency Text */}
+                        <View style={{ marginTop: 12, flexDirection: 'row', gap: 5, alignItems: 'center', opacity: 0.8 }}>
+                            <Ionicons name="information-circle-outline" size={14} color="#856404" />
+                            <Text style={{ fontSize: 10, color: '#856404', flex: 1 }}>
+                                यह शुल्क आपके प्रोफेशनल आईडी कार्ड, क्लाउड सर्वर और ट्रेनिंग सामग्री के लिए लिया जाता है।
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+                )}
+
                 <View style={[styles.profileCard, { backgroundColor: (theme as any).card || theme.background, borderColor: theme.borderColor }]}>
                     <View style={styles.profileTop}>
                         <View style={styles.avatarContainer}>
@@ -152,7 +304,19 @@ export default function NanhePatrakarPortfolioScreen() {
                             </View>
                         </View>
                         <View style={styles.profileInfo}>
-                            <Text style={[styles.nameText, { color: theme.text }]}>{childProfile.name}</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Text style={[styles.nameText, { color: theme.text, flex: 1 }]}>{childProfile.name}</Text>
+                                <TouchableOpacity 
+                                    onPress={() => router.push({
+                                        pathname: '/nanhe-patrakar-edit-child',
+                                        params: { profileData: JSON.stringify(childProfile) }
+                                    } as any)}
+                                    style={[styles.editBtn, { backgroundColor: theme.primary + '15' }]}
+                                >
+                                    <Ionicons name="pencil-outline" size={16} color={theme.primary} />
+                                    <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '700', marginLeft: 4 }}>Edit</Text>
+                                </TouchableOpacity>
+                            </View>
                             <Text style={[styles.schoolText, { color: theme.placeholderText }]}>{childProfile.school_name}, {childProfile.district?.name}</Text>
                             <View style={styles.tagRow}>
                                 <View style={[styles.groupTag, { backgroundColor: theme.primary + '15' }]}>
@@ -166,18 +330,22 @@ export default function NanhePatrakarPortfolioScreen() {
                     <View style={styles.statsRow}>
                         <View style={styles.statItem}>
                             <Text style={[styles.statValue, { color: theme.text }]}>
-                                {myStories.filter(s => s.status_display === 'Approved').length.toString().padStart(2, '0')}
+                                {stats?.total_approved?.toString().padStart(2, '0') || '00'}
                             </Text>
                             <Text style={styles.statLabel}>प्रकाशित</Text>
                         </View>
                         <View style={styles.statsDivider} />
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, { color: theme.text }]}>{Math.floor(Math.random() * 50) + 10}K</Text>
+                            <Text style={[styles.statValue, { color: theme.text }]}>
+                                {stats?.total_views >= 1000 ? `${(stats.total_views / 1000).toFixed(1)}K` : stats?.total_views || '0'}
+                            </Text>
                             <Text style={styles.statLabel}>पाठक</Text>
                         </View>
                         <View style={styles.statsDivider} />
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, { color: theme.text }]}>{Math.floor(Math.random() * 100) + 20}</Text>
+                            <Text style={[styles.statValue, { color: theme.text }]}>
+                                {stats?.total_likes || '0'}
+                            </Text>
                             <Text style={styles.statLabel}>शाबाशी</Text>
                         </View>
                     </View>
@@ -278,7 +446,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         <Text style={{ marginTop: 10, color: theme.text, fontWeight: '600' }}>अभी तक कोई खबर प्रकाशित नहीं हुई है</Text>
                     </View>
                 )}
-                <View style={{ height: 100 }} />
+                <View style={{ height: insets.bottom + 100 }} />
             </ScrollView>
         </View>
     );
@@ -542,4 +710,11 @@ const styles = StyleSheet.create({
     authLoginBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
     authCancelBtn: { paddingVertical: 10 },
     authCancelText: { fontSize: 14, fontWeight: '600' },
+    editBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 12,
+    },
 });

@@ -3,13 +3,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
-
-
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,133 +21,123 @@ export default function LoginScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={[theme.primaryGradientStart, theme.primaryGradientEnd]}
-        style={styles.headerBackground}
-      />
-      
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color={theme.headerBg} />
-          </TouchableOpacity>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+            {/* Header section with Logo/Title */}
+            <View style={styles.headerSection}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
+                </TouchableOpacity>
+                
+                <View style={styles.brandingContainer}>
+                    <Text style={[styles.appName, { color: theme.primary }]}>Jan Himachal</Text>
+                    <Text style={[styles.welcomeText, { color: theme.text }]}>नमस्ते / Welcome</Text>
+                    <Text style={[styles.subText, { color: theme.placeholderText }]}>अपने अकाउंट में लॉगिन करें</Text>
+                </View>
+            </View>
 
-          <View style={styles.headerContent}>
-              <Text style={[styles.welcomeText, { color: theme.headerBg }]}>Welcome Back!</Text>
-              <Text style={styles.subText}>Sign in to continue to DXB News</Text>
-          </View>
+            {/* Direct Login Form */}
+            <View style={styles.formContainer}>
+                
+                <View style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
+                    <Ionicons name="person-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
+                    <TextInput 
+                        style={[styles.input, { color: theme.text }]}
+                        placeholder="ईमेल या यूजरनेम (Email / Username)"
+                        placeholderTextColor={theme.placeholderText}
+                        value={email}
+                        onChangeText={setEmail}
+                        autoCapitalize="none"
+                    />
+                </View>
 
-          <View style={[styles.card, { backgroundColor: theme.background, shadowColor: theme.cardShadow }]}>
-              
-              <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Email or Username</Text>
-                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
-                      <Ionicons name="mail-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
-                      <TextInput 
-                          style={[styles.input, { color: theme.text }]}
-                          placeholder="Enter your email"
-                          placeholderTextColor={theme.placeholderText}
-                          value={email}
-                          onChangeText={setEmail}
-                      />
-                  </View>
-              </View>
+                <View style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
+                    <TextInput 
+                        style={[styles.input, { color: theme.text }]}
+                        placeholder="पासवर्ड (Password)"
+                        placeholderTextColor={theme.placeholderText}
+                        secureTextEntry
+                        value={password}
+                        onChangeText={setPassword}
+                    />
+                </View>
 
-              <View style={styles.inputGroup}>
-                  <Text style={[styles.label, { color: theme.text }]}>Password</Text>
-                  <View style={[styles.inputContainer, { borderColor: theme.borderColor }]}>
-                      <Ionicons name="lock-closed-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
-                      <TextInput 
-                          style={[styles.input, { color: theme.text }]}
-                          placeholder="Enter your password"
-                          placeholderTextColor={theme.placeholderText}
-                          secureTextEntry
-                          value={password}
-                          onChangeText={setPassword}
-                      />
-                  </View>
-                  <TouchableOpacity style={styles.forgotBtn}>
-                      <Text style={[styles.forgotText, { color: theme.primary }]}>Forgot Password?</Text>
-                  </TouchableOpacity>
-              </View>
+                <TouchableOpacity style={styles.forgotBtn}>
+                    <Text style={[styles.forgotText, { color: theme.primary }]}>पासवर्ड भूल गए? (Forgot Password?)</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.loginBtn, isLoggingIn && { opacity: 0.7 }]}
-                activeOpacity={0.8}
-                disabled={isLoggingIn}
-                onPress={async () => {
-                    try {
-                        if (!email || !password) {
-                            alert('Please enter both email and password');
-                            return;
+                <TouchableOpacity 
+                    style={[styles.loginBtn, isLoggingIn && { opacity: 0.7 }]}
+                    activeOpacity={0.8}
+                    disabled={isLoggingIn}
+                    onPress={async () => {
+                        try {
+                            if (!email || !password) {
+                                alert('कृपया ईमेल और पासवर्ड भरें');
+                                return;
+                            }
+                            setIsLoggingIn(true);
+                            await login(email, password);
+                            if (redirect) {
+                                router.replace(redirect as any);
+                            } else {
+                                router.replace('/(tabs)/profile');
+                            }
+                        } catch (error: any) {
+                            alert(error.message || 'लॉगिन विफल रहा');
+                        } finally {
+                            setIsLoggingIn(false);
                         }
-                        setIsLoggingIn(true);
-                        await login(email, password);
-                        if (redirect) {
-                            router.replace(redirect as any);
-                        } else {
-                            router.replace('/(tabs)/profile');
-                        }
-                    } catch (error: any) {
-                        alert(error.message || 'Login failed');
-                    } finally {
-                        setIsLoggingIn(false);
-                    }
-                }} // Real Login
-              >
-                  <LinearGradient
-                    colors={[theme.secondaryGradientStart, theme.secondaryGradientEnd]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.btnGradient}
-                  >
-                      {isLoggingIn ? (
-                          <ActivityIndicator size="small" color={theme.headerBg} />
-                      ) : (
-                          <Text style={[styles.loginBtnText, { color: theme.headerBg }]}>Log In</Text>
-                      )}
-                  </LinearGradient>
-              </TouchableOpacity>
+                    }}
+                >
+                    <LinearGradient
+                        colors={['#E31E24', '#B71C1C']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.btnGradient}
+                    >
+                        {isLoggingIn ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.loginBtnText}>लॉगिन करें (Log In)</Text>
+                        )}
+                    </LinearGradient>
+                </TouchableOpacity>
 
-              <View style={styles.dividerRow}>
-                  <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
-                  <Text style={[styles.orText, { color: theme.placeholderText }]}>OR</Text>
-                  <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
-              </View>
+                {/* --- Social Logins Separated --- */}
+                <View style={styles.dividerRow}>
+                    <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
+                    <Text style={[styles.orText, { color: theme.placeholderText }]}>या अन्य माध्यम (OR)</Text>
+                    <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
+                </View>
+            </View>
 
-              <View style={styles.socialContainer}>
-                  <TouchableOpacity style={[styles.socialBtn, { borderColor: theme.borderColor }]}>
-                      <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/300/300221.png' }} style={styles.socialIcon} />
-                      <Text style={[styles.socialText, { color: theme.text }]}>Continue with Google</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity style={[styles.socialBtn, { borderColor: theme.borderColor }]}>
-                      <FontAwesome name="twitter" size={24} color="#1DA1F2" />
-                      <Text style={[styles.socialText, { color: theme.text }]}>Continue with Twitter</Text>
-                  </TouchableOpacity>
-              </View>
+            <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: theme.placeholderText }]}>अकाउंट नहीं है? (No account?)</Text>
+                <TouchableOpacity onPress={() => router.push({
+                    pathname: '/auth/signup',
+                    params: { redirect }
+                } as any)}>
+                    <Text style={[styles.signupText, { color: theme.primary }]}>साइन अप (Sign Up)</Text>
+                </TouchableOpacity>
+            </View>
 
-          </View>
-
-          <View style={styles.footer}>
-              <Text style={[styles.footerText, { color: theme.placeholderText }]}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => router.push({
-                  pathname: '/auth/signup',
-                  params: { redirect }
-              } as any)}>
-                  <Text style={[styles.signupText, { color: theme.primary }]}>Sign Up</Text>
-              </TouchableOpacity>
-          </View>
-
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -157,61 +145,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerBackground: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: height * 0.4,
-  },
   scrollContent: {
       flexGrow: 1,
-      paddingTop: 60,
-      paddingHorizontal: 20,
+      paddingHorizontal: 24,
+      paddingBottom: 40,
   },
-  backBtn: {
-      marginBottom: 30,
-  },
-  headerContent: {
+  headerSection: {
+      paddingTop: 40,
       marginBottom: 40,
   },
-  welcomeText: {
-      fontSize: 32,
-      fontWeight: '800',
-      marginBottom: 8,
-  },
-  subText: {
-      fontSize: 16,
-      color: 'rgba(255,255,255,0.8)',
-  },
-  card: {
-      borderRadius: 24,
-      padding: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 10,
-      elevation: 5,
-      marginBottom: 30,
-  },
-  inputGroup: {
+  backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
       marginBottom: 20,
   },
-  label: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginBottom: 8,
-      marginLeft: 4,
+  brandingContainer: {
+      marginTop: 10,
   },
-  inputContainer: {
+  appName: {
+      fontSize: 18,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      marginBottom: 10,
+  },
+  welcomeText: {
+      fontSize: 28,
+      fontWeight: '800',
+      marginBottom: 4,
+  },
+  subText: {
+      fontSize: 15,
+      fontWeight: '500',
+  },
+  formContainer: {
+      flex: 1,
+  },
+  inputGroup: {
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      height: 50,
+      borderRadius: 16,
+      paddingHorizontal: 16,
+      height: 60,
+      marginBottom: 16,
   },
   inputIcon: {
-      marginRight: 10,
+      marginRight: 12,
   },
   input: {
       flex: 1,
@@ -220,32 +203,35 @@ const styles = StyleSheet.create({
   },
   forgotBtn: {
       alignSelf: 'flex-end',
-      marginTop: 8,
+      marginBottom: 30,
   },
   forgotText: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '600',
   },
   loginBtn: {
-      marginTop: 10,
-      marginBottom: 24,
-      borderRadius: 12,
+      borderRadius: 16,
       overflow: 'hidden',
+      elevation: 4,
+      shadowColor: '#E31E24',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
   },
   btnGradient: {
-      paddingVertical: 16,
+      height: 60,
       alignItems: 'center',
       justifyContent: 'center',
   },
   loginBtnText: {
       fontSize: 16,
       fontWeight: '700',
-      letterSpacing: 0.5,
+      color: '#fff',
   },
   dividerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 24,
+      marginVertical: 35,
   },
   divider: {
       flex: 1,
@@ -253,36 +239,38 @@ const styles = StyleSheet.create({
   },
   orText: {
       marginHorizontal: 16,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '600',
   },
-  socialContainer: {
-      gap: 16,
+  socialRow: {
+      flexDirection: 'row',
+      gap: 12,
+      justifyContent: 'space-between',
   },
-  socialBtn: {
+  socialIconBtn: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderRadius: 12,
-      paddingVertical: 16,
-      gap: 12,
-      width: '100%',
+      borderRadius: 16,
+      height: 56,
+      gap: 10,
   },
   socialIcon: {
-      width: 24,
-      height: 24,
+      width: 22,
+      height: 22,
   },
-  socialText: {
+  socialBtnText: {
       fontWeight: '600',
-      fontSize: 16,
+      fontSize: 14,
   },
   footer: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      marginBottom: 40,
+      gap: 8,
+      marginTop: 40,
   },
   footerText: {
       fontSize: 14,

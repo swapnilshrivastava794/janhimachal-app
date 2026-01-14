@@ -184,11 +184,29 @@ export function getSubmissionDetail(id) {
   return axiosInstance.get(`/api/nanhe-patrakar/submissions/${id}/`);
 }
 
+// GET SUBMISSION STATS (Dashboard)
+export function getSubmissionStats() {
+  return axiosInstance.get("/api/nanhe-patrakar/submissions/stats/");
+}
+
 // UPDATE NORMAL PROFILE
 export function updateNormalProfile(payload) {
   const formData = new FormData();
   Object.keys(payload).forEach(key => formData.append(key, payload[key]));
   return axiosInstance.put("/api/nanhe-patrakar/user/update/", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+}
+
+// UPDATE CHILD PROFILE
+export function updateChildProfile(childId, payload) {
+  const formData = new FormData();
+  Object.keys(payload).forEach(key => {
+    if (payload[key] !== undefined && payload[key] !== null) {
+      formData.append(key, payload[key]);
+    }
+  });
+  return axiosInstance.put(`/api/nanhe-patrakar/child-profiles/${childId}/`, formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
 }
@@ -268,5 +286,15 @@ export const searchNews = async (query, params = {}) => {
 };
 
 
+
+// RAZORPAY PAYMENT APIS
+export function createRazorpayOrder() {
+  return axiosInstance.post("/api/nanhe-patrakar/payment/create-order/");
+}
+
+export function verifyRazorpayPayment(payload) {
+  // payload: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
+  return axiosInstance.post("/api/nanhe-patrakar/payment/verify/", payload);
+}
 
 export default axiosInstance;

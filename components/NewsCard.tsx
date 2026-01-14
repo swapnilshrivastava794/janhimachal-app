@@ -1,8 +1,8 @@
-import { Share, Image, StyleSheet, Text, TouchableOpacity, View, DimensionValue } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
+import { DimensionValue, Image, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface NewsCardProps {
   id?: string | number; // Added ID for sharing
@@ -20,7 +20,7 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
-  const imageUrl = image && image.startsWith('http') ? image : 'https://via.placeholder.com/400x200?text=DXB+News';
+  const imageUrl = image && image.startsWith('http') ? image : 'https://janhimachal.com/wp-content/uploads/2023/04/jan-himachal-logo.png';
   const displayDate = date ? new Date(date).toLocaleDateString() : '';
 
   const handleShare = async () => {
@@ -64,7 +64,7 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.text }]} numberOfLines={3}>{title}</Text>
         <View style={styles.metaContainer}>
-          <Text style={[styles.metaText, { color: theme.icon }]}>{"DXB News"} • {displayDate || date}</Text>
+          <Text style={[styles.metaText, { color: theme.icon }]}>{"Jan Himachal"} • {displayDate || date}</Text>
         </View>
       </View>
     </TouchableOpacity>

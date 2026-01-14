@@ -76,6 +76,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkUser();
   }, []);
 
+  useEffect(() => {
+    console.log("🔍 AuthContext State Debug:");
+    console.log("👤 User:", JSON.stringify(user, null, 2));
+    console.log("👨‍👩‍👧 Parent Profile:", JSON.stringify(parentProfile, null, 2));
+    AsyncStorage.getItem('accessToken').then(token => console.log("🔑 Access Token:", token));
+  }, [user, parentProfile]);
+
     const checkUser = async () => {
         try {
             const userData = await AsyncStorage.getItem('user');
@@ -254,6 +261,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const refreshProfile = async () => {
         try {
+            const token = await AsyncStorage.getItem('accessToken');
+            if (!token) {
+                console.log('ℹ️ AuthContext: No token found, skipping profile refresh.');
+                return;
+            }
+
             console.log('🔄 AuthContext: Refreshing Profile Data...');
             const { getParentProfile } = require('../api/server');
             const response = await getParentProfile();
@@ -265,15 +278,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 
                 // Update basic user info
                 const userData = data.user;
+                let updatedUser: User | null = null;
+                
                 if (userData) {
-                    const updatedUser: User = {
+                    updatedUser = {
                         ...user, // Keep existing fields like avatar/stats if any
                         id: userData.id,
                         email: userData.email,
                         first_name: userData.first_name,
                         last_name: userData.last_name,
                         name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
-                        user_type: data.profile_exists ? 'nanhe_patrakar' : user?.user_type
+                        user_type: (data.profile_exists || data.parent_profile) ? 'nanhe_patrakar' : user?.user_type
                     };
                     console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
                     setUser(updatedUser);
@@ -281,9 +296,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 }
 
                 // Update Parent Profile info
-                if (data.profile_exists && data.parent_profile) {
+                // EDITED: Relaxed condition - if parent_profile data exists, use it (even if profile_exists is false - e.g. payment pending)
+                if (data.parent_profile) {
                     console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
                     setParentProfile(data.parent_profile);
+                    
+                    // Ensure user_type is updated
+                     if (user?.user_type !== 'nanhe_patrakar') {
+                        // We need to update user_type in state as well if it wasn't caught in the user update above
+                         const baseUser = updatedUser || user;
+                         if (baseUser) {
+                             const updatedWithRole = { ...baseUser, user_type: 'nanhe_patrakar' };
+                             setUser(updatedWithRole);
+                             await AsyncStorage.setItem('user', JSON.stringify(updatedWithRole));
+                         }
+                    }
+
                 } else {
                     console.log('ℹ️ AuthContext: No Parent Profile exists for this user.');
                     setParentProfile(null);

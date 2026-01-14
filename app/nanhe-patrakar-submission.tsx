@@ -1,4 +1,5 @@
-import { createSubmission, getMyChildProfiles, getNanhePatrakarTopics } from '@/api/server';
+import { createRazorpayOrder, createSubmission, getMyChildProfiles, getNanhePatrakarTopics, verifyRazorpayPayment } from '@/api/server';
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -14,6 +15,7 @@ import {
     Dimensions,
     Image,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StatusBar,
@@ -21,8 +23,9 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
@@ -43,7 +46,7 @@ const LANGUAGES = [
 ];
 
 export default function NanhePatrakarSubmissionScreen() {
-    const { user, isLoading: authLoading } = useAuth();
+    const { user, parentProfile, isLoading: authLoading, refreshProfile } = useAuth();
     const router = useRouter();
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
@@ -58,6 +61,10 @@ export default function NanhePatrakarSubmissionScreen() {
     const [content, setContent] = useState('');
     const [mediaDescription, setMediaDescription] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    
+    const isPaid = parentProfile?.status === 'PAYMENT_COMPLETED';
     
     // Media States
     const [images, setImages] = useState<any[]>([]); // Max 2
@@ -66,8 +73,80 @@ export default function NanhePatrakarSubmissionScreen() {
     useEffect(() => {
         if (user) {
             getData();
+            if (parentProfile && parentProfile.status !== 'PAYMENT_COMPLETED') {
+                setShowPaymentModal(true);
+            }
         }
-    }, [user]);
+    }, [user, parentProfile]);
+
+    const startPayment = (orderData: any) => {
+        const rzpOrderId = orderData.id || orderData.order_id;
+        const options = {
+            description: 'Nanhe Patrakar Registration',
+            image: 'https://janhimachal.com/static/img/logo.png',
+            currency: 'INR',
+            key: constant.razorpayKeyId?.trim(),
+            amount: orderData.amount, 
+            name: 'Jan Himachal',
+            order_id: rzpOrderId,
+            prefill: {
+                email: user?.email || 'help@janhimachal.com',
+                contact: user?.phone || '',
+                name: user?.name || ''
+            },
+            theme: { color: theme.primary }
+        };
+
+        RazorpayCheckout.open(options).then(async (data: any) => {
+            try {
+                const verifyPayload = {
+                    razorpay_order_id: data.razorpay_order_id,
+                    razorpay_payment_id: data.razorpay_payment_id,
+                    razorpay_signature: data.razorpay_signature
+                };
+                
+                const verifyRes = await verifyRazorpayPayment(verifyPayload);
+
+                if (verifyRes.data && (verifyRes.data.payment_status === "SUCCESS" || verifyRes.data.status === "PAYMENT_COMPLETED")) {
+                    Alert.alert('Success', 'भुगतान सफल रहा!');
+                    setShowPaymentModal(false);
+                    await refreshProfile(); 
+                    router.replace('/nanhe-patrakar-portfolio' as any);
+                } else {
+                    Alert.alert('Processing', 'Payment received. Verifying status...');
+                    setShowPaymentModal(false);
+                    await refreshProfile();
+                    router.replace('/nanhe-patrakar-portfolio' as any);
+                }
+            } catch (verifyErr: any) {
+                Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है।');
+                setShowPaymentModal(false);
+                await refreshProfile();
+                router.replace('/nanhe-patrakar-portfolio' as any);
+            }
+        }).catch((error: any) => {
+            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा।');
+        });
+    };
+
+    const handlePayment = async () => {
+        setIsLoading(true);
+        try {
+            const orderResponse = await createRazorpayOrder();
+            if (orderResponse.data && orderResponse.data.status) {
+                const orderData = orderResponse.data.data || orderResponse.data;
+                startPayment(orderData);
+            } else {
+                Alert.alert('Error', orderResponse.data?.message || 'Failed to create order');
+            }
+        } catch (err: any) {
+            Alert.alert('Error', 'Payment initiation failed.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
 
     const getData = async () => {
         try {
@@ -188,6 +267,10 @@ export default function NanhePatrakarSubmissionScreen() {
     };
 
     const handleSubmission = async () => {
+        if (!isPaid) {
+            setShowPaymentModal(true);
+            return;
+        }
         if (!title.trim()) { Alert.alert("शीर्षक खाली है", "कृपया खबर का शीर्षक लिखें।"); return; }
         if (!content.trim()) { Alert.alert("सामग्री खाली है", "कृपया कुछ शब्द लिखें।"); return; }
         if (!selectedTopic) { Alert.alert("विषय चुनें", "कृपया एक विषय चुनें।"); return; }
@@ -237,7 +320,7 @@ export default function NanhePatrakarSubmissionScreen() {
         }
     };
 
-    if (authLoading) return <View style={styles.loading}><ActivityIndicator size="large" color={theme.primary} /></View>;
+    if (authLoading || isLoading) return <View style={styles.loading}><ActivityIndicator size="large" color={theme.primary} /></View>;
 
     if (!user) {
         return (
@@ -350,6 +433,50 @@ export default function NanhePatrakarSubmissionScreen() {
                     <View style={{ height: 100 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Payment Required Modal */}
+            <Modal
+                visible={showPaymentModal}
+                transparent={true}
+                animationType="fade"
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.paymentModal, { backgroundColor: theme.background }]}>
+                        <View style={[styles.paymentIconCircle, { backgroundColor: theme.primary + '15' }]}>
+                            <Ionicons name="card-outline" size={40} color={theme.primary} />
+                        </View>
+                        <Text style={[styles.paymentTitle, { color: theme.text }]}>भुगतान आवश्यक है</Text>
+                        <Text style={[styles.paymentDesc, { color: theme.placeholderText }]}>
+                            "नन्हे पत्रकार" बनने और अपनी खबरें भेजने के लिए पंजीकरण शुल्क का भुगतान करना अनिवार्य है।
+                        </Text>
+                        
+                        <TouchableOpacity 
+                            style={[styles.payBtn, { backgroundColor: theme.primary }]}
+                            onPress={handlePayment}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <>
+                                    <Text style={styles.payBtnText}>अभी भुगतान करें (Pay Now)</Text>
+                                    <Ionicons name="card" size={18} color="#fff" />
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.laterBtn}
+                            onPress={() => {
+                                setShowPaymentModal(false);
+                                router.back();
+                            }}
+                        >
+                            <Text style={[styles.laterBtnText, { color: theme.placeholderText }]}>बाद में करें</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -385,5 +512,68 @@ const styles = StyleSheet.create({
     authPromptWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
     authTitle: { fontSize: 18, fontWeight: '800', marginBottom: 20 },
     authLoginBtn: { paddingHorizontal: 40, paddingVertical: 15, borderRadius: 12 },
-    authLoginBtnText: { color: '#fff', fontWeight: '800' }
+    authLoginBtnText: { color: '#fff', fontWeight: '800' },
+
+    // Payment Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    paymentModal: {
+        width: '100%',
+        borderRadius: 30,
+        padding: 30,
+        alignItems: 'center',
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+    },
+    paymentIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    paymentTitle: {
+        fontSize: 22,
+        fontWeight: '900',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    paymentDesc: {
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 30,
+    },
+    payBtn: {
+        width: '100%',
+        paddingVertical: 16,
+        borderRadius: 15,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+        elevation: 5,
+    },
+    payBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    laterBtn: {
+        marginTop: 15,
+        paddingVertical: 10,
+    },
+    laterBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });

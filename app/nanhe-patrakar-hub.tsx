@@ -293,8 +293,9 @@ export default function NanhePatrakarHubScreen() {
                     ) : submissions.length > 0 ? (
                         submissions.map((post) => {
                             const firstMedia = post.media_files && post.media_files.length > 0 ? post.media_files[0].file : null;
-                            // Ensure URL is absolute if it's relative
-                            const imageUrl = firstMedia ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`) : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=500&auto=format&fit=crop';
+                            const imageUrl = firstMedia 
+                                ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`) 
+                                : 'https://janhimachal.com/wp-content/uploads/2023/04/jan-himachal-logo.png'; // Branded Fallback
 
                             return (
                                 <TouchableOpacity 

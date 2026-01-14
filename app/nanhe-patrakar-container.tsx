@@ -7,16 +7,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import NanhePatrakarGuide from './nanhe-patrakar';
 import NanhePatrakarHub from './nanhe-patrakar-hub';
@@ -33,42 +33,80 @@ const NanhePatrakarJoinTeaser = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.teaserContainer} showsVerticalScrollIndicator={false}>
-            <View style={styles.teaserArt}>
-                <LinearGradient colors={['#E31E24', '#8E1418']} style={styles.artCircle}>
-                    <Ionicons name="star" size={50} color="#fff" />
+            {/* Cinematic Header Section */}
+            <View style={styles.teaserHeader}>
+                <View style={[styles.badge, { backgroundColor: theme.primary + '20' }]}>
+                    <Ionicons name="sparkles" size={14} color={theme.primary} />
+                    <Text style={[styles.badgeText, { color: theme.primary }]}>LIMITED OPPORTUNITY</Text>
+                </View>
+                
+                <Text style={[styles.teaserTitle, { color: theme.text }]}>क्या आपका बच्चा बनेगा{"\n"}<Text style={{ color: theme.primary }}>हिमाचल की नई पहचान?</Text></Text>
+                
+                <Text style={[styles.teaserDesc, { color: theme.placeholderText }]}>
+                    "नन्हे पत्रकार" कार्यक्रम से जुड़कर अपने बच्चे की प्रतिभा को निखारें और उन्हें समाज की आवाज़ बनने का मौका दें।
+                </Text>
+            </View>
+
+            {/* Illustration/Art Section */}
+            <View style={styles.teaserArtWrapper}>
+                <LinearGradient 
+                    colors={[theme.primary, '#8E1418']} 
+                    style={styles.mainArtCircle}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <Ionicons name="mic-outline" size={60} color="#fff" />
+                    <View style={styles.glowEffect} />
                 </LinearGradient>
-                <View style={styles.artDottedCircle} />
+                <View style={[styles.orbitCircle, { borderColor: theme.primary + '40' }]} />
+                <View style={[styles.orbitCircle2, { borderColor: theme.primary + '20' }]} />
             </View>
             
-            <Text style={[styles.teaserTitle, { color: theme.text }]}>क्या आपका बच्चा बनेगा हिमाचल की नयी पहचान?</Text>
-            <Text style={[styles.teaserDesc, { color: theme.placeholderText }]}>
-                "नन्हे पत्रकार" कार्यक्रम से जुड़कर अपने बच्चे की प्रतिभा को पूरी दुनिया को दिखाएं। 
-                उससे मिलेगा अपना डिजिटल प्रेस कार्ड और अपनी ख़बरें प्रकाशित करने का मौका।
-            </Text>
-
-            <View style={styles.benefitList}>
+            {/* Premium Benefit Cards */}
+            <View style={styles.benefitGrid}>
                 {[
-                    { icon: 'card-outline', text: 'डिजिटल प्रेस आईडी कार्ड' },
-                    { icon: 'newspaper-outline', text: 'खबरों का डिजिटल पोर्टफोलियो' },
-                    { icon: 'ribbon-outline', text: 'प्रमाण-पत्र और पहचान' },
+                    { icon: 'id-card', title: 'प्रेस आईडी कार्ड', desc: 'पहचान और गर्व' },
+                    { icon: 'document-text', title: 'डिजिटल पोर्टफोलियो', desc: 'लेखन का संग्रह' },
+                    { icon: 'school', title: 'ट्रेनिंग और गाइडेंस', desc: 'सीखने का अवसर' },
                 ].map((b, i) => (
-                    <View key={i} style={styles.benefitItem}>
-                        <Ionicons name={b.icon as any} size={20} color="#E31E24" />
-                        <Text style={[styles.benefitText, { color: theme.text }]}>{b.text}</Text>
+                    <View key={i} style={[styles.benefitCard, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
+                        <View style={[styles.benefitIconBox, { backgroundColor: theme.primary + '10' }]}>
+                            <Ionicons name={b.icon as any} size={22} color={theme.primary} />
+                        </View>
+                        <View style={styles.benefitInfo}>
+                            <Text style={[styles.benefitTitle, { color: theme.text }]}>{b.title}</Text>
+                            <Text style={[styles.benefitSub, { color: theme.placeholderText }]}>{b.desc}</Text>
+                        </View>
                     </View>
                 ))}
             </View>
 
-            <TouchableOpacity 
-                style={styles.teaserBtn}
-                activeOpacity={0.8}
-                onPress={() => router.push('/nanhe-patrakar-registration' as any)}
-            >
-                <LinearGradient colors={['#E31E24', '#B71C1C']} style={styles.teaserBtnGradient}>
-                    <Text style={styles.teaserBtnText}>अभी रजिस्ट्रेशन करें (₹599)</Text>
-                    <Ionicons name="arrow-forward" size={20} color="#fff" />
-                </LinearGradient>
-            </TouchableOpacity>
+            {/* Premium CTA Button */}
+            <View style={styles.ctaWrapper}>
+                <TouchableOpacity 
+                    style={styles.teaserBtn}
+                    activeOpacity={0.9}
+                    onPress={() => router.push('/nanhe-patrakar-registration' as any)}
+                >
+                    <LinearGradient 
+                        colors={['#E31E24', '#B71C1C']} 
+                        style={styles.teaserBtnGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                    >
+                        <View style={styles.btnContent}>
+                            <Text style={styles.teaserBtnText}>अभी रजिस्ट्रेशन करें</Text>
+                            <Text style={styles.teaserBtnSub}>मात्र ₹599 (एक बार के लिए)</Text>
+                        </View>
+                        <View style={styles.btnIconCircle}>
+                            <Ionicons name="arrow-forward" size={20} color={theme.primary} />
+                        </View>
+                    </LinearGradient>
+                </TouchableOpacity>
+                <Text style={[styles.trustNote, { color: theme.placeholderText }]}>
+                    <Ionicons name="shield-checkmark" size={12} /> 100% सुरक्षित भुगतान और सरकारी मान्यता प्राप्त पहल
+                </Text>
+            </View>
         </ScrollView>
     );
 };
@@ -78,6 +116,7 @@ export default function NanhePatrakarContainer() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { user, isLoading } = useAuth();
+  const insets = useSafeAreaInsets();
   
   if (isLoading) {
     return (
@@ -146,7 +185,7 @@ export default function NanhePatrakarContainer() {
       </View>
 
       {/* Floating Bottom Tab Bar for Nanhe Patrakar Sub-app */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { paddingBottom: Math.max(insets.bottom, 15) }]}>
         <View style={[styles.tabBar, { backgroundColor: '#1A1A1A', borderColor: 'rgba(255,255,255,0.1)' }]}>
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -186,7 +225,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
     backgroundColor: 'transparent',
   },
   tabBar: {
@@ -226,25 +264,90 @@ const styles = StyleSheet.create({
   },
   
   // Teaser Styles
-  teaserContainer: { padding: 30, alignItems: 'center', paddingTop: 60, paddingBottom: 150 },
-  teaserArt: { width: 120, height: 120, justifyContent: 'center', alignItems: 'center', marginBottom: 40 },
-  artCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', zIndex: 2 },
-  artDottedCircle: { 
-      position: 'absolute', 
-      width: 120, 
-      height: 120, 
-      borderRadius: 60, 
-      borderWidth: 2, 
-      borderColor: '#E31E24', 
-      borderStyle: 'dashed', 
-      opacity: 0.3 
+  teaserContainer: { paddingHorizontal: 24, paddingBottom: 150 },
+  teaserHeader: { alignItems: 'center', marginTop: 40, marginBottom: 30 },
+  badge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 20, 
+    gap: 6, 
+    marginBottom: 20 
   },
-  teaserTitle: { fontSize: 22, fontWeight: '900', textAlign: 'center', marginBottom: 15, lineHeight: 30 },
-  teaserDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22, marginBottom: 30, opacity: 0.8 },
-  benefitList: { width: '100%', gap: 15, marginBottom: 40 },
-  benefitItem: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: 'rgba(0,0,0,0.03)', padding: 15, borderRadius: 15 },
-  benefitText: { fontSize: 14, fontWeight: '700' },
-  teaserBtn: { width: '100%', borderRadius: 20, overflow: 'hidden', elevation: 5 },
-  teaserBtnGradient: { paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  teaserBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  badgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  teaserTitle: { fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 16, lineHeight: 36 },
+  teaserDesc: { fontSize: 14, textAlign: 'center', lineHeight: 22, opacity: 0.8 },
+  
+  teaserArtWrapper: { 
+    width: '100%', 
+    height: 180, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 40 
+  },
+  mainArtCircle: { 
+    width: 110, 
+    height: 110, 
+    borderRadius: 55, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    zIndex: 2,
+    elevation: 10,
+    shadowColor: '#E31E24',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+  },
+  glowEffect: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 55,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  orbitCircle: { 
+    position: 'absolute', 
+    width: 140, 
+    height: 140, 
+    borderRadius: 70, 
+    borderWidth: 1.5, 
+    borderStyle: 'dashed',
+  },
+  orbitCircle2: { 
+    position: 'absolute', 
+    width: 170, 
+    height: 170, 
+    borderRadius: 85, 
+    borderWidth: 1,
+  },
+  
+  benefitGrid: { gap: 12, marginBottom: 40 },
+  benefitCard: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      padding: 16, 
+      borderRadius: 20, 
+      borderWidth: 1,
+      gap: 16,
+  },
+  benefitIconBox: { 
+      width: 48, 
+      height: 48, 
+      borderRadius: 14, 
+      justifyContent: 'center', 
+      alignItems: 'center' 
+  },
+  benefitInfo: { flex: 1 },
+  benefitTitle: { fontSize: 15, fontWeight: '800', marginBottom: 2 },
+  benefitSub: { fontSize: 12, fontWeight: '500' },
+  
+  ctaWrapper: { alignItems: 'center', gap: 15 },
+  teaserBtn: { width: '100%', borderRadius: 24, overflow: 'hidden', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
+  teaserBtnGradient: { paddingVertical: 14, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  btnContent: { gap: 2 },
+  teaserBtnText: { color: '#fff', fontSize: 17, fontWeight: '900' },
+  teaserBtnSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' },
+  btnIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+  trustNote: { fontSize: 11, fontWeight: '600', opacity: 0.6 },
 });

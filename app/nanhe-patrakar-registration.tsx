@@ -1,4 +1,5 @@
-import { enrollNanhePatrakar, getDistricts } from '@/api/server';
+import { createRazorpayOrder, enrollNanhePatrakar, getDistricts, verifyRazorpayPayment } from '@/api/server';
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -24,6 +25,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import RazorpayCheckout from 'react-native-razorpay';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const { width } = Dimensions.get('window');
@@ -55,8 +58,9 @@ export default function NanhePatrakarRegistrationScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
-  const { user, isLoading, updateUserType } = useAuth();
-
+  const { user, isLoading, updateUserType, refreshProfile } = useAuth();
+  const insets = useSafeAreaInsets();
+  
   // --- Form State ---
   const [studentName, setStudentName] = useState('');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState('');
@@ -75,6 +79,10 @@ export default function NanhePatrakarRegistrationScreen() {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(true);
   const [showDistrictModal, setShowDistrictModal] = useState(false);
   const [districtId, setDistrictId] = useState<string | null>(null);
+  
+  // Track if user is already enrolled on server but payment pending
+  const [isEnrolled, setIsEnrolled] = useState(false);
+
 
 
   // --- Fetch Districts ---
@@ -85,9 +93,15 @@ export default function NanhePatrakarRegistrationScreen() {
   const fetchDistricts = async () => {
     try {
       const response = await getDistricts();
-      // Based on the provided response structure: response.data.data.results
+      console.log('🏘️ Districts Response:', JSON.stringify(response.data, null, 2));
+      
+      // Robust Extraction
       if (response.data && response.data.status && response.data.data && response.data.data.results) {
         setDistricts(response.data.data.results);
+      } else if (response.data && response.data.results) {
+         setDistricts(response.data.results);
+      } else if (Array.isArray(response.data)) {
+         setDistricts(response.data);
       }
     } catch (error) {
       console.error('Error fetching districts:', error);
@@ -146,11 +160,11 @@ export default function NanhePatrakarRegistrationScreen() {
           text: "Gallery", 
           onPress: async () => {
             const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.7,
-            });
+              mediaTypes: ['images'], // Updated from MediaTypeOptions
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.5,
+        });
             if (!result.canceled) {
               if (type === 'parent') setParentIdProof(result.assets[0].uri);
               else setChildIdProof(result.assets[0].uri);
@@ -162,7 +176,100 @@ export default function NanhePatrakarRegistrationScreen() {
     );
   };
 
+    const startPayment = (orderData: any) => {
+    const rzpOrderId = orderData?.id || orderData?.razorpay_order_id;
+    if (!rzpOrderId) {
+        console.error("❌ Order ID missing. Received:", JSON.stringify(orderData));
+        Alert.alert("Error", "Payment initialization failed due to invalid order data.");
+        return;
+    }
+    console.log('Initiating Payment with order:', rzpOrderId);
+    const options = {
+      description: 'Nanhe Patrakar Registration',
+      image: 'https://janhimachal.com/static/img/logo.png', 
+      currency: 'INR',
+      key: constant.razorpayKeyId?.trim(), 
+      amount: orderData.amount,
+      name: 'Jan Himachal',
+      order_id: rzpOrderId,
+      prefill: {
+        email: user?.email || 'help@janhimachal.com',
+        contact: guardianPhone || user?.phone || '',
+        name: studentName || guardianName || ''
+      },
+      theme: { color: theme.primary }
+    };
+
+    RazorpayCheckout.open(options).then(async (data: any) => {
+      // handle success
+      console.log(`Payment Success: ${data.razorpay_payment_id}`);
+      
+      try {
+          // Call Backend Verify API
+          const verifyPayload = {
+              razorpay_order_id: data.razorpay_order_id,
+              razorpay_payment_id: data.razorpay_payment_id,
+              razorpay_signature: data.razorpay_signature
+          };
+          
+          const verifyRes = await verifyRazorpayPayment(verifyPayload);
+          console.log('✅ Verify Response:', JSON.stringify(verifyRes.data, null, 2));
+
+          if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
+              Alert.alert('Payment Successful', 'आपका पंजीकरण और भुगतान सफल रहा!');
+              // Update Context
+              await refreshProfile(); 
+              router.replace('/nanhe-patrakar-hub' as any);
+          } else {
+              Alert.alert('Processing', 'Payment received. Verifying status...');
+              await refreshProfile();
+              router.replace('/nanhe-patrakar-hub' as any);
+          }
+      } catch (verifyErr: any) {
+          console.error('Verify Error:', verifyErr);
+          // Even if verification API fails on client, if money is deducted, webhook should handle it.
+          // But effectively we show success to user if Razorpay said success.
+          Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है। थोड़ी देर में प्रोफाइल अपडेट हो जाएगी।');
+          router.replace('/nanhe-patrakar-hub' as any);
+      }
+
+    }).catch((error: any) => {
+      // handle failure
+      console.log(`Error: ${error.code} | ${error.description}`);
+      Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया प्रोफ़ाइल सेक्शन से पुन: प्रयास करें।');
+      router.replace('/profile' as any);
+    });
+  };
+
+  const handlePaymentOnly = async () => {
+    setIsSubmitting(true); 
+    try {
+        console.log("🚀 Starting Direct Payment Flow (Retry Mode)...");
+        const orderResponse = await createRazorpayOrder();
+        console.log('📦 Razorpay Order (Retry):', JSON.stringify(orderResponse.data, null, 2));
+
+        if (orderResponse.data && orderResponse.data.status) {
+             const orderData = orderResponse.data.data || orderResponse.data;
+             startPayment(orderData);
+        } else {
+            throw new Error(orderResponse.data?.message || 'Failed to create payment order');
+        }
+    } catch (orderErr: any) {
+        console.error('Order Creation Error:', orderErr);
+        Alert.alert('त्रुटि', orderErr.message || 'भुगतान आदेश बनाने में विफल।');
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    // 1. If already enrolled, just retry payment
+    if (isEnrolled) {
+        await handlePaymentOnly();
+        return;
+    }
+
+    // 2. Strict Validation restored as requested
     if (!studentName || !selectedAgeGroup || !schoolName || !district || !city) {
         Alert.alert('त्रुटि', 'कृपया छात्र की सभी जानकारी भरें।');
         return;
@@ -176,7 +283,7 @@ export default function NanhePatrakarRegistrationScreen() {
         return;
     }
     if (!childIdProof) {
-        Alert.alert('त्रुटि', 'बच्चे का पहचान पत्र (Child ID Proof) अपलोड करना अनिवार्य है।');
+        Alert.alert('त्रुटि', 'बच्चे की फोटो (Child Profile Photo) अपलोड करना अनिवार्य है।');
         return;
     }
     if (!agreeTerms) {
@@ -191,13 +298,13 @@ export default function NanhePatrakarRegistrationScreen() {
         const payload: any = {
             mobile: guardianPhone,
             city: city,
-            district_id: d_id, // Parent district
+            district_id: d_id, 
             terms_accepted: "true",
             child_name: studentName,
-            child_date_of_birth: "2015-05-15", // Mock DOB if not in form
+            child_date_of_birth: "2015-05-15", 
             child_age: selectedAgeGroup === 'A' ? "9" : selectedAgeGroup === 'B' ? "12" : "15",
             child_district_id: d_id,
-            child_gender: "M", // Mock Gender if not in form
+            child_gender: "M", 
             child_school_name: schoolName,
         };
 
@@ -216,7 +323,6 @@ export default function NanhePatrakarRegistrationScreen() {
                 name: 'child_id_proof.jpg',
                 type: 'image/jpeg',
             };
-            // Set child_photo to same as child_id_proof if needed, or ask for separate
             payload.child_photo = {
                 uri: childIdProof,
                 name: 'child_photo.jpg',
@@ -224,37 +330,32 @@ export default function NanhePatrakarRegistrationScreen() {
             };
         }
 
-        const response = await enrollNanhePatrakar(payload);
-        console.log('📝 Enrollment Response:', JSON.stringify(response.data, null, 2));
-        
-        if (response.data && response.data.status === true) {
-            // Update the user_type in local context and AsyncStorage
-            const newUserType = response.data.data?.user_type;
-            if (newUserType) {
-                console.log('🔄 Updating user_type to:', newUserType);
-                await updateUserType(newUserType);
-            } else {
-                console.warn('⚠️ user_type not found in response data');
-                // Fallback: manually set if we know it should be nanhe_patrakar
-                await updateUserType('nanhe_patrakar');
-            }
-            
-            Alert.alert(
-                'सफलता', 
-                response.data.message || 'आपका पंजीकरण सफलतापूर्वक प्राप्त हुआ है।',
-                [
-                    { 
-                        text: 'आगे बढ़ें', 
-                        onPress: () => router.push('/payment-success' as any) 
-                    }
-                ]
-            );
+        const enrollRes = await enrollNanhePatrakar(payload);
+        console.log('📝 Enrollment Response:', JSON.stringify(enrollRes.data, null, 2));
+
+        if (enrollRes.data && enrollRes.data.status === true) {
+            // Enrollment Success
+            setIsEnrolled(true);
+            await handlePaymentOnly(); // Proceed to payment
         } else {
-            throw new Error(response.data?.message || 'Registration failed unexpectedly');
+            // Handle "User already enrolled" specifically
+            if (enrollRes.data?.message === "User already enrolled" || enrollRes.data?.message?.includes("already")) {
+                console.log("ℹ️ User was already enrolled. Marking state as enrolled and retrying payment.");
+                setIsEnrolled(true);
+                await handlePaymentOnly(); // Proceed to payment
+            } else {
+                throw new Error(enrollRes.data?.message || 'Enrollment failed');
+            }
         }
     } catch (error: any) {
         console.error('Enrollment Error:', error);
-        Alert.alert('पंजीकरण विफल', error.message || 'आपका पंजीकरण सबमिट नहीं किया जा सका। कृपया बाद में प्रयास करें।');
+        if (!error.message?.includes("already enrolled")) { 
+           Alert.alert('पंजीकरण विफल', error.message || 'Server error');
+        } else {
+            // Fallback just in case the error throws before logic above catches it
+             setIsEnrolled(true);
+             await handlePaymentOnly();
+        }
     } finally {
         setIsSubmitting(false);
     }
@@ -366,27 +467,8 @@ export default function NanhePatrakarRegistrationScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>नन्हे पत्रकार पंजीकरण</Text>
-        <View style={{ flexDirection: 'row', gap: 15 }}>
-          <TouchableOpacity 
-            onPress={() => router.push('/nanhe-patrakar-submission' as any)}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="eye-outline" size={24} color={theme.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => router.push('/nanhe-patrakar-portfolio' as any)}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="person-circle-outline" size={24} color={theme.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => router.push('/nanhe-patrakar-hub' as any)}
-            style={{ padding: 4 }}
-          >
-            <Ionicons name="star-outline" size={24} color={theme.primary} />
-          </TouchableOpacity>
-        </View>
+        <Text style={[styles.headerTitle, { color: theme.text, flex: 1, marginLeft: 10 }]}>नन्हे पत्रकार पंजीकरण</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <KeyboardAvoidingView 
@@ -398,6 +480,8 @@ export default function NanhePatrakarRegistrationScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
         >
+
+
             {/* --- Info Card --- */}
             <View style={[styles.infoCard, { backgroundColor: theme.primary + '08' }]}>
                 <View style={styles.infoBadge}>
@@ -552,9 +636,9 @@ export default function NanhePatrakarRegistrationScreen() {
                     )}
                 </View>
 
-                {/* --- CHILD ID PROOF UPLOAD --- */}
+                {/* --- CHILD PHOTO UPLOAD --- */}
                 <View style={styles.inputBox}>
-                    <Text style={styles.label}>बच्चे का पहचान पत्र (Child ID Proof)</Text>
+                    <Text style={styles.label}>बच्चे की फोटो (Child Profile Photo)</Text>
                     {childIdProof ? (
                         <View style={[styles.previewBox, { borderColor: theme.borderColor }]}>
                             <Image source={{ uri: childIdProof }} style={styles.previewImage} />
@@ -567,9 +651,9 @@ export default function NanhePatrakarRegistrationScreen() {
                             style={[styles.uploadWrapper, { borderColor: theme.borderColor, backgroundColor: theme.primary + '05' }]}
                             onPress={() => pickImage('child')}
                         >
-                            <Ionicons name="school-outline" size={32} color={theme.primary} />
-                            <Text style={[styles.uploadTitle, { color: theme.text }]}>Child ID Proof (JPEG/PNG)</Text>
-                            <Text style={styles.uploadSub}>स्कूल ID कार्ड या जन्म प्रमाण पत्र</Text>
+                            <Ionicons name="camera-outline" size={32} color={theme.primary} />
+                            <Text style={[styles.uploadTitle, { color: theme.text }]}>Child Photo (JPEG/PNG)</Text>
+                            <Text style={styles.uploadSub}>बच्चे की स्पष्ट पासपोर्ट साइज फोटो अपलोड करें</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -603,12 +687,14 @@ export default function NanhePatrakarRegistrationScreen() {
                 {isSubmitting ? (
                     <ActivityIndicator color="#fff" />
                 ) : (
-                    <Text style={styles.finalBtnText}>रजिस्टर करें और भुगतान करें</Text>
+                    <Text style={styles.finalBtnText}>
+                        {isEnrolled ? "भुगतान पुनः प्रयास करें (Retry Payment)" : "रजिस्टर करें और भुगतान करें"}
+                    </Text>
                 )}
             </TouchableOpacity>
 
 
-            <View style={{ height: Platform.OS === 'ios' ? 100 : 60 }} />
+            <View style={{ height: insets.bottom + 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -766,3 +852,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+

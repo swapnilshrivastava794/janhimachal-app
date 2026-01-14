@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
@@ -13,9 +14,8 @@ export function CustomDrawerContent(props: any) {
   const theme = Colors[colorScheme ?? 'light'];
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-
-  // Placeholder for login state
-  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const { user, logout } = useAuth();
+  const isLoggedIn = !!user;
 
   const handleSocialLink = (url: string) => {
     Linking.openURL(url);
@@ -55,15 +55,16 @@ export function CustomDrawerContent(props: any) {
                 <View style={styles.onlineBadge} />
               </View>
               <View style={styles.userTextContainer}>
-                <Text style={styles.userName}>John Doe</Text>
-                <Text style={styles.userEmail}>john.doe@dxbnews.com</Text>
+                <Text style={styles.userName}>{user?.name || 'User'}</Text>
+                <Text style={styles.userEmail}>{user?.email || 'user@janhimachal.com'}</Text>
               </View>
             </View>
           ) : (
             <View style={styles.guestInfo}>
-              <Text style={styles.guestWelcome}>Welcome Guest</Text>
-              <Text style={styles.guestSub}>Discover the latest updates from UAE</Text>
-              <TouchableOpacity style={styles.loginBtnHeader} onPress={() => setIsLoggedIn(true)}>
+              <Text style={styles.guestWelcome}>Welcome to</Text>
+              <Text style={styles.guestWelcome}>Jan Himachal</Text>
+              <Text style={styles.guestSub}>हिमाचल की आवाज़, हिमाचल के लिए</Text>
+              <TouchableOpacity style={styles.loginBtnHeader} onPress={() => props.navigation.navigate('auth/login')}>
                 <Text style={styles.loginBtnText}>Login / Sign Up</Text>
               </TouchableOpacity>
             </View>
@@ -98,7 +99,7 @@ export function CustomDrawerContent(props: any) {
             {/* Auth Action */}
             {isLoggedIn && (
                <View style={{ marginTop: 20 }}>
-                 <MenuItem icon="log-out-outline" label="Logout" onPress={() => setIsLoggedIn(false)} color={theme.accent} />
+                 <MenuItem icon="log-out-outline" label="Logout" onPress={() => logout()} color={theme.accent} />
                </View>
             )}
 
