@@ -1,4 +1,5 @@
-import { createRazorpayOrder, getMyChildProfiles, getSubmissionStats, getSubmissions, verifyRazorpayPayment } from '@/api/server';
+import { checkCertificateStatus, createRazorpayOrder, getMyChildProfiles, getSubmissionStats, getSubmissions, verifyRazorpayPayment } from '@/api/server';
+import { PortfolioSkeleton } from '@/components/NanhePatrakarSkeleton';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -39,6 +40,10 @@ export default function NanhePatrakarPortfolioScreen() {
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isPaid, setIsPaid] = useState(false); // Local state to hide banner after payment
+    const [certificateStatus, setCertificateStatus] = useState<{
+        ready: boolean;
+        message: string;
+    }>({ ready: false, message: '' });
 
     useEffect(() => {
         if (user) {
@@ -84,6 +89,19 @@ export default function NanhePatrakarPortfolioScreen() {
                     }
                 } catch (statsErr) {
                     console.log("Stats API not fully ready yet, using defaults");
+                }
+
+                // Check Certificate Status
+                try {
+                    const certRes = await checkCertificateStatus(profile.id);
+                    if (certRes.data) {
+                        setCertificateStatus({
+                            ready: certRes.data.certificate_ready || false,
+                            message: certRes.data.message || ''
+                        });
+                    }
+                } catch (certErr) {
+                    console.log("Certificate check API error:", certErr);
                 }
             }
         } catch (error) {
@@ -147,6 +165,8 @@ export default function NanhePatrakarPortfolioScreen() {
         }).catch((error: any) => {
             console.log(`Error: ${error.code} | ${error.description}`);
             Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
+            // Refresh profile to ensure context is updated
+            refreshProfile();
             // Stay on portfolio page instead of redirecting to profile
         });
     };
@@ -173,9 +193,21 @@ export default function NanhePatrakarPortfolioScreen() {
 
     if (authLoading || isLoading) {
         return (
-            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={theme.primary} />
-                <Text style={{ marginTop: 10, color: theme.text }}>प्रोफ़ाइल लोड हो रही है...</Text>
+            <View style={[styles.container, { backgroundColor: theme.background, paddingTop: STATUSBAR_HEIGHT }]}>
+                <Stack.Screen options={{ headerShown: false }} />
+                <StatusBar barStyle={colorScheme === 'dark' ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+                
+                <View style={[styles.header, { borderBottomColor: theme.borderColor }]}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="chevron-back" size={28} color={theme.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.headerTitle, { color: theme.text }]}>Portfolio & Identity</Text>
+                    <View style={{ width: 28 }} />
+                </View>
+                
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                    <PortfolioSkeleton />
+                </ScrollView>
             </View>
         );
     }
@@ -395,6 +427,33 @@ export default function NanhePatrakarPortfolioScreen() {
                 </View>
 
                 <Text style={[styles.sectionHeading, { color: theme.text }]}>नन्हा पत्रकार प्रमाण-पत्र</Text>
+                
+                {/* Certificate Not Ready Message */}
+                {!certificateStatus.ready && (
+                    <View style={[styles.certificateLockedCard, { backgroundColor: theme.primary + '08', borderColor: theme.borderColor }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <View style={[styles.lockedIconCircle, { backgroundColor: theme.primary + '15' }]}>
+                                <Ionicons name="lock-closed" size={24} color={theme.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={[styles.lockedTitle, { color: theme.text }]}>प्रमाण-पत्र अभी तैयार नहीं है</Text>
+                                <Text style={[styles.lockedDesc, { color: theme.placeholderText }]}>
+                                    अपनी पहली खबर भेजें और उसे Approve होने दें। उसके बाद आपका प्रमाण-पत्र उपलब्ध हो जाएगा।
+                                </Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity 
+                            onPress={() => router.push('/nanhe-patrakar-submission' as any)}
+                            style={[styles.submitNowBtn, { backgroundColor: theme.primary }]}
+                        >
+                            <Ionicons name="create-outline" size={18} color="#fff" />
+                            <Text style={styles.submitNowBtnText}>अभी खबर भेजें</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Certificate - Show only if ready */}
+                {certificateStatus.ready && (
                 <TouchableOpacity activeOpacity={0.9} style={styles.certificateWrapper}>
                     <LinearGradient colors={['#fdfcfb', '#e2d1c3']} style={styles.certificateContainer}>
                         <View style={styles.certBorder}>
@@ -434,6 +493,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         <Text style={styles.downloadBtnText}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
                     </TouchableOpacity>
                 </TouchableOpacity>
+                )}
 
                 <View style={styles.portfolioHeader}>
                     <Text style={[styles.sectionHeading, { color: theme.text, marginBottom: 0, marginTop: 40 }]}>मेरी रचनाएं (Portfolio)</Text>
@@ -582,6 +642,42 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         marginBottom: 15,
         marginLeft: 4,
+    },
+    certificateLockedCard: {
+        padding: 16,
+        borderRadius: 15,
+        borderWidth: 1,
+        marginBottom: 20,
+    },
+    lockedIconCircle: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    lockedTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        marginBottom: 4,
+    },
+    lockedDesc: {
+        fontSize: 12,
+        lineHeight: 18,
+    },
+    submitNowBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 15,
+        paddingVertical: 12,
+        borderRadius: 10,
+        gap: 8,
+    },
+    submitNowBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '700',
     },
     certificateWrapper: { marginBottom: 20 },
     certificateContainer: {

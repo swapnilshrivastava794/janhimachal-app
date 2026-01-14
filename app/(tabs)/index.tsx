@@ -8,9 +8,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useCategory } from '@/context/CategoryContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
@@ -19,7 +20,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { selectedSubcategoryId, selectedCategoryName } = useCategory();
-  const { user } = useAuth();
+  const { user, parentProfile, refreshProfile } = useAuth();
   
   const [topStories, setTopStories] = useState<any[]>([]);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
@@ -29,11 +30,39 @@ export default function HomeScreen() {
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // ScrollView ref for auto-scrolling when category changes
+  const scrollViewRef = useRef<ScrollView>(null);
+  const topStoriesYPosition = useRef(0);
+  const initialCategoryRef = useRef<number | null>(null);
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
+  // Refresh profile data EVERY TIME Home screen comes into focus (not just mount)
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        console.log('🏠 Home Screen Focused - Refreshing Profile...');
+        refreshProfile();
+      }
+    }, [user])
+  );
+
   useEffect(() => {
     fetchData();
+    
+    // Track if this is default view or user changed category
+    if (initialCategoryRef.current === null && selectedSubcategoryId) {
+      // First load - save the initial category
+      initialCategoryRef.current = selectedSubcategoryId;
+    } else if (initialCategoryRef.current !== null && selectedSubcategoryId !== initialCategoryRef.current) {
+      // User changed category - auto scroll to news section
+      if (scrollViewRef.current && topStoriesYPosition.current > 0) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ y: topStoriesYPosition.current - 10, animated: true });
+        }, 300);
+      }
+    }
   }, [selectedSubcategoryId]); // Refetch when subcategory changes
 
   const fetchData = async () => {
@@ -130,18 +159,24 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScrollView 
+      ref={scrollViewRef}
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       
       {/* Cinematic Nanhe Patrakar Dash Banner */}
       <TouchableOpacity 
         activeOpacity={0.9}
         onPress={() => {
             if (!user) {
+                // Not logged in - go to login
                 router.push('/auth/login' as any);
-            } else if (!isNanhePatrakar) {
-                router.push('/nanhe-patrakar-registration' as any);
-            } else {
+            } else if (parentProfile) {
+                // Has parent profile (enrolled) - go to portfolio (for payment or viewing)
                 router.push('/nanhe-patrakar-portfolio' as any);
+            } else {
+                // Logged in but no parent profile - go to registration
+                router.push('/nanhe-patrakar-registration' as any);
             }
         }}
         style={{ margin: 16, marginBottom: 8, borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#E31E24', shadowOffset: {width:0, height:6}, shadowOpacity: 0.4, shadowRadius: 12 }}
@@ -246,7 +281,21 @@ export default function HomeScreen() {
       )}
 
       {/* 1. Top Stories Section */}
-      <View style={styles.sectionContainer}>
+      <View 
+        style={styles.sectionContainer}
+        onLayout={(event) => {
+          topStoriesYPosition.current = event.nativeEvent.layout.y;
+        }}
+      >
+        {/* Category Indicator */}
+        {selectedCategoryName && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
+            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
+            </View>
+            <Text style={{ color: theme.placeholderText, fontSize: 11 }}>की खबरें</Text>
+          </View>
+        )}
         <SectionHeader 
             title={`Top Stories and Breaking News in ${selectedCategoryName || 'UAE News'}`} 
             onViewAll={() => handleViewAll('Top Stories', 'top_stories')} 

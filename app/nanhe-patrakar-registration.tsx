@@ -9,21 +9,21 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -241,6 +241,8 @@ export default function NanhePatrakarRegistrationScreen() {
       // handle failure
       console.log(`Error: ${error.code} | ${error.description}`);
       Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
+      // Refresh profile to ensure context is updated
+      refreshProfile();
       // Stay on current page instead of redirecting
     });
   };
@@ -344,7 +346,8 @@ export default function NanhePatrakarRegistrationScreen() {
         console.log('📝 Enrollment Response:', JSON.stringify(enrollRes.data, null, 2));
 
         if (enrollRes.data && enrollRes.data.status === true) {
-            // Enrollment Success
+            // Enrollment Success - Refresh profile immediately
+            await refreshProfile();
             setIsEnrolled(true);
             await handlePaymentOnly(); // Proceed to payment
         } else {

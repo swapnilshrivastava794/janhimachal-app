@@ -126,6 +126,8 @@ export default function NanhePatrakarSubmissionScreen() {
             }
         }).catch((error: any) => {
             Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा।');
+            // Refresh profile to ensure context is updated
+            refreshProfile();
         });
     };
 

@@ -1,4 +1,5 @@
 import { getChildProfilesList, getNanhePatrakarTopics, getSubmissions } from '@/api/server';
+import { StoryCardSkeleton } from '@/components/NanhePatrakarSkeleton';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -286,9 +287,10 @@ export default function NanhePatrakarHubScreen() {
                 {/* --- Posts Grid --- */}
                 <View style={styles.gridContainer}>
                     {isLoadingSubmissions ? (
-                        <View style={{ padding: 50, alignItems: 'center' }}>
-                            <ActivityIndicator size="large" color={theme.primary} />
-                            <Text style={{ marginTop: 10, color: theme.text, opacity: 0.6 }}>खबरें लोड हो रही हैं...</Text>
+                        <View style={{ paddingHorizontal: 10 }}>
+                            <StoryCardSkeleton />
+                            <StoryCardSkeleton />
+                            <StoryCardSkeleton />
                         </View>
                     ) : submissions.length > 0 ? (
                         submissions.map((post) => {

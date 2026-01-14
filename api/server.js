@@ -189,6 +189,11 @@ export function getSubmissionStats() {
   return axiosInstance.get("/api/nanhe-patrakar/submissions/stats/");
 }
 
+// CHECK CERTIFICATE STATUS
+export function checkCertificateStatus(childId) {
+  return axiosInstance.get(`/api/nanhe-patrakar/certificate-check/${childId}/`);
+}
+
 // UPDATE NORMAL PROFILE
 export function updateNormalProfile(payload) {
   const formData = new FormData();
