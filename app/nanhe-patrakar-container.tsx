@@ -45,6 +45,33 @@ const NanhePatrakarJoinTeaser = () => {
                 <Text style={[styles.teaserDesc, { color: theme.placeholderText }]}>
                     "नन्हे पत्रकार" कार्यक्रम से जुड़कर अपने बच्चे की प्रतिभा को निखारें और उन्हें समाज की आवाज़ बनने का मौका दें।
                 </Text>
+
+                {/* Registration Button moved up for immediate visibility */}
+                <View style={[styles.ctaWrapper, { marginTop: 25, width: '100%' }]}>
+                    <TouchableOpacity 
+                        style={styles.teaserBtn}
+                        activeOpacity={0.9}
+                        onPress={() => router.push('/nanhe-patrakar-registration' as any)}
+                    >
+                        <LinearGradient 
+                            colors={['#E31E24', '#B71C1C']} 
+                            style={styles.teaserBtnGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <View style={styles.btnContent}>
+                                <Text style={styles.teaserBtnText}>अभी रजिस्ट्रेशन करें</Text>
+                                <Text style={styles.teaserBtnSub}>मात्र ₹599 (एक बार के लिए)</Text>
+                            </View>
+                            <View style={styles.btnIconCircle}>
+                                <Ionicons name="arrow-forward" size={20} color={theme.primary} />
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                    <Text style={[styles.trustNote, { color: theme.placeholderText }]}>
+                        <Ionicons name="shield-checkmark" size={12} /> 100% सुरक्षित भुगतान
+                    </Text>
+                </View>
             </View>
 
             {/* Illustration/Art Section */}
@@ -52,7 +79,7 @@ const NanhePatrakarJoinTeaser = () => {
                 <LinearGradient 
                     colors={[theme.primary, '#8E1418']} 
                     style={styles.mainArtCircle}
-                    start={{ x: 0, y: 0 }}
+                    start={{ x: 0, y: 1 }}
                     end={{ x: 1, y: 1 }}
                 >
                     <Ionicons name="mic-outline" size={60} color="#fff" />
@@ -79,33 +106,6 @@ const NanhePatrakarJoinTeaser = () => {
                         </View>
                     </View>
                 ))}
-            </View>
-
-            {/* Premium CTA Button */}
-            <View style={styles.ctaWrapper}>
-                <TouchableOpacity 
-                    style={styles.teaserBtn}
-                    activeOpacity={0.9}
-                    onPress={() => router.push('/nanhe-patrakar-registration' as any)}
-                >
-                    <LinearGradient 
-                        colors={['#E31E24', '#B71C1C']} 
-                        style={styles.teaserBtnGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                    >
-                        <View style={styles.btnContent}>
-                            <Text style={styles.teaserBtnText}>अभी रजिस्ट्रेशन करें</Text>
-                            <Text style={styles.teaserBtnSub}>मात्र ₹599 (एक बार के लिए)</Text>
-                        </View>
-                        <View style={styles.btnIconCircle}>
-                            <Ionicons name="arrow-forward" size={20} color={theme.primary} />
-                        </View>
-                    </LinearGradient>
-                </TouchableOpacity>
-                <Text style={[styles.trustNote, { color: theme.placeholderText }]}>
-                    <Ionicons name="shield-checkmark" size={12} /> 100% सुरक्षित भुगतान और सरकारी मान्यता प्राप्त पहल
-                </Text>
             </View>
         </ScrollView>
     );

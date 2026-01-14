@@ -89,6 +89,29 @@ export default function NanhePatrakarScreen() {
                   </Text>
               </View>
 
+              {/* High Visibility Registration Button */}
+              <View style={[styles.inlineCTA, { marginBottom: 25 }]}>
+                  {hasRegisteredChild ? (
+                      <TouchableOpacity 
+                        style={[styles.mainButton, { backgroundColor: '#4CAF50' }]}
+                        activeOpacity={0.8}
+                        onPress={() => router.push('/nanhe-patrakar-submission' as any)} 
+                      > 
+                         <Text style={styles.mainButtonText}>अपनी खबर भेजें (Submit News)</Text>
+                         <Ionicons name="send" size={20} color="#fff" />
+                      </TouchableOpacity>
+                  ) : (
+                      <TouchableOpacity 
+                        style={[styles.mainButton, { backgroundColor: theme.primary }]}
+                        activeOpacity={0.8}
+                        onPress={() => router.push('/nanhe-patrakar-registration' as any)} 
+                      > 
+                         <Text style={styles.mainButtonText}>रजिस्ट्रेशन के लिए आगे बढ़ें</Text>
+                         <Ionicons name="arrow-forward" size={20} color="#fff" />
+                      </TouchableOpacity>
+                  )}
+              </View>
+
               {/* Eligibility Icons */}
               <View style={styles.eligibilityGrid}>
                   <View style={[styles.eBox, { backgroundColor: theme.primary + '08', borderColor: theme.borderColor }]}>
@@ -146,29 +169,8 @@ export default function NanhePatrakarScreen() {
                   </Text>
               </View>
 
-              {/* CTA Button moved inside scroll view */}
-              <View style={[styles.inlineCTA, { marginTop: 40 }]}>
-                  {hasRegisteredChild ? (
-                      <TouchableOpacity 
-                        style={[styles.mainButton, { backgroundColor: '#4CAF50' }]}
-                        activeOpacity={0.8}
-                        onPress={() => router.push('/nanhe-patrakar-submission' as any)} 
-                      > 
-                         <Text style={styles.mainButtonText}>अपनी खबर भेजें (Submit News)</Text>
-                         <Ionicons name="send" size={20} color="#fff" />
-                      </TouchableOpacity>
-                  ) : (
-                      <TouchableOpacity 
-                        style={[styles.mainButton, { backgroundColor: theme.primary }]}
-                        activeOpacity={0.8}
-                        onPress={() => router.push('/nanhe-patrakar-registration' as any)} 
-                      > 
-                         <Text style={styles.mainButtonText}>रजिस्ट्रेशन के लिए आगे बढ़ें</Text>
-                         <Ionicons name="arrow-forward" size={20} color="#fff" />
-                      </TouchableOpacity>
-                  )}
-              </View>
-
+              {/* Bottom Spacer */}
+              <View style={{ height: 40 }} />
           </View>
           <View style={{ height: 60 }} />
       </ScrollView>
