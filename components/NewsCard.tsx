@@ -1,3 +1,4 @@
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
@@ -5,8 +6,8 @@ import React from 'react';
 import { DimensionValue, Image, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface NewsCardProps {
-  id?: string | number; // Added ID for sharing
-  type?: 'post' | 'video'; // Added Type for sharing
+  id?: string | number;
+  type?: 'post' | 'video';
   title: string;
   image: string;
   category: string;
@@ -14,21 +15,25 @@ interface NewsCardProps {
   date: string;
   onPress?: () => void;
   width?: DimensionValue;
+  // Share URL - directly from API
+  shareUrl?: string;
 }
 
-export function NewsCard({ id, type = 'post', title, image, category, author, date, onPress, width }: NewsCardProps) {
+export function NewsCard({ id, type = 'post', title, image, category, author, date, onPress, width, shareUrl }: NewsCardProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
-  const imageUrl = image && image.startsWith('http') ? image : 'https://janhimachal.com/wp-content/uploads/2023/04/jan-himachal-logo.png';
+  const imageUrl = image && image.startsWith('http') ? image : `${constant.appBaseUrl}/wp-content/uploads/2023/04/jan-himachal-logo.png`;
   const displayDate = date ? new Date(date).toLocaleDateString() : '';
 
   const handleShare = async () => {
       try {
-          const url = `https://dxbnewsnetwork.com/${type}/${id}`; // Construct URL
+          // Use share_url from API directly, fallback to constructed URL
+          const url = shareUrl || `${constant.appBaseUrl}/${type}/${id}`;
+          
           await Share.share({
               message: `${title}\n\nRead more: ${url}`,
-              url: url, // iOS
+              url: url,
               title: title
           });
       } catch (error: any) {

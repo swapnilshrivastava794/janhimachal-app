@@ -297,7 +297,7 @@ export default function NanhePatrakarHubScreen() {
                             const firstMedia = post.media_files && post.media_files.length > 0 ? post.media_files[0].file : null;
                             const imageUrl = firstMedia 
                                 ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`) 
-                                : 'https://janhimachal.com/wp-content/uploads/2023/04/jan-himachal-logo.png'; // Branded Fallback
+                                : `${constant.appBaseUrl}/wp-content/uploads/2023/04/jan-himachal-logo.png`;
 
                             return (
                                 <TouchableOpacity 

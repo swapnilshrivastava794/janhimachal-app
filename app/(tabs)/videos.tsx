@@ -1,11 +1,11 @@
 import { getVideos } from '@/api/server';
+import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { Colors } from '@/constants/theme';
 import { useCategory } from '@/context/CategoryContext';
-import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -99,7 +99,7 @@ export default function VideoScreen() {
     
     const category = item.subcategory || item.category || 'VIDEO';
     const date = formatDate(item.video_date || item.post_date || item.date);
-    const author = item.posted_by || item.author || 'DXB';
+    const author = item.posted_by || item.author || 'Jan Himachal';
 
     // Featured First Item
     if (index === 0) {

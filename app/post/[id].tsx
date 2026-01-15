@@ -1,17 +1,18 @@
-import { NewsCard } from '@/components/NewsCard';
+import { getNews, getNewsDetail, getVideoDetail, getVideos } from '@/api/server';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Dimensions, Image, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Linking, Alert } from 'react-native';
-import YoutubePlayer from "react-native-youtube-iframe";
+import { ActivityIndicator, Alert, Dimensions, Image, Linking, ScrollView, Share, StatusBar, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import RenderHtml from 'react-native-render-html';
-import * as Clipboard from 'expo-clipboard';
-import { getNews, getNewsDetail, getVideoDetail, getVideos } from '@/api/server';
+import YoutubePlayer from "react-native-youtube-iframe";
 
-const { width: screenWidth } = Dimensions.get('window'); // Keep for static usage if any, but prefer hook for HTML
-const WEB_BASE_URL = "https://dxbnewsnetwork.com"; // Assumed production domain
+import constant from '@/constants/constant';
+
+const { width: screenWidth } = Dimensions.get('window');
+const WEB_BASE_URL = constant.appBaseUrl;
 
 export default function ArticleDetailScreen() {
   const router = useRouter();
@@ -32,10 +33,9 @@ export default function ArticleDetailScreen() {
 
   /* --- Share Handlers --- */
   const getShareUrl = () => {
-      // Logic: Use slug if available, else ID. Construct full web URL.
+      // Use share_url from API if available
       if (!article) return WEB_BASE_URL;
-      const slug = article.slug || article.id;
-      return `${WEB_BASE_URL}/${slug}`;
+      return article.share_url || `${WEB_BASE_URL}/${article.slug || article.id}`;
   };
 
   const shareToWhatsApp = () => {
@@ -131,8 +131,11 @@ export default function ArticleDetailScreen() {
 
   const handleShare = async () => {
     try {
+      const url = getShareUrl();
       await Share.share({
-        message: `Check out this article: ${article.title} - Read more on DXB News Network`,
+        message: `${article.post_title || article.title}\n\nRead more: ${url}`,
+        url: url,
+        title: article.post_title || article.title
       });
     } catch (error) {
       console.log(error);
@@ -169,7 +172,7 @@ export default function ArticleDetailScreen() {
                 </View>
                 <View>
                     <Text style={[styles.authorName, { color: theme.text }]}>
-                        {((article.posted_by || article.author || 'DXB News') as string).charAt(0).toUpperCase() + ((article.posted_by || article.author || 'DXB News') as string).slice(1)}
+                        {((article.posted_by || article.author || 'Jan Himachal') as string).charAt(0).toUpperCase() + ((article.posted_by || article.author || 'Jan Himachal') as string).slice(1)}
                     </Text>
                     <Text style={[styles.date, { color: theme.tabIconDefault }]}>{formatDate(article.video_date || article.post_date || article.date)}</Text>
                 </View>

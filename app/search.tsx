@@ -1,23 +1,22 @@
 import { searchNews } from '@/api/server';
+import { NewsCard } from '@/components/NewsCard';
+import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { NewsCard } from '@/components/NewsCard';
-import { NewsSkeleton } from '@/components/NewsSkeleton';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -69,6 +68,7 @@ export default function SearchScreen() {
             category={item.category || "Search Result"}
             author={item.posted_by || item.author || "Unknown"}
             date={item.post_date || item.date}
+            shareUrl={item.share_url}
             onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
         />
       </View>

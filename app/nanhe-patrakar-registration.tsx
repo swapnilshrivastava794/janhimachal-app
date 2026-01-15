@@ -223,18 +223,18 @@ export default function NanhePatrakarRegistrationScreen() {
               Alert.alert('Payment Successful', 'आपका पंजीकरण और भुगतान सफल रहा!');
               // Update Context
               await refreshProfile(); 
-              router.replace('/nanhe-patrakar-hub' as any);
+              router.replace('/nanhe-patrakar-portfolio' as any);
           } else {
               Alert.alert('Processing', 'Payment received. Verifying status...');
               await refreshProfile();
-              router.replace('/nanhe-patrakar-hub' as any);
+              router.replace('/nanhe-patrakar-portfolio' as any);
           }
       } catch (verifyErr: any) {
           console.error('Verify Error:', verifyErr);
           // Even if verification API fails on client, if money is deducted, webhook should handle it.
           // But effectively we show success to user if Razorpay said success.
           Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है। थोड़ी देर में प्रोफाइल अपडेट हो जाएगी।');
-          router.replace('/nanhe-patrakar-hub' as any);
+          router.replace('/nanhe-patrakar-portfolio' as any);
       }
 
     }).catch((error: any) => {

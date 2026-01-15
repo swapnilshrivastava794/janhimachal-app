@@ -76,12 +76,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkUser();
   }, []);
 
-  useEffect(() => {
-    console.log("🔍 AuthContext State Debug:");
-    console.log("👤 User:", JSON.stringify(user, null, 2));
-    console.log("👨‍👩‍👧 Parent Profile:", JSON.stringify(parentProfile, null, 2));
-    AsyncStorage.getItem('accessToken').then(token => console.log("🔑 Access Token:", token));
-  }, [user, parentProfile]);
+//   useEffect(() => {
+//     console.log("🔍 AuthContext State Debug:");
+//     console.log("👤 User:", JSON.stringify(user, null, 2));
+//     console.log("👨‍👩‍👧 Parent Profile:", JSON.stringify(parentProfile, null, 2));
+//     AsyncStorage.getItem('accessToken').then(token => console.log("🔑 Access Token:", token));
+//   }, [user, parentProfile]);
 
     const checkUser = async () => {
         try {
@@ -90,8 +90,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (userData && token) {
                 const parsedUser = JSON.parse(userData);
                 setUser(parsedUser);
-                // Also try to refresh profile data if token exists
-                refreshProfile();
+                await refreshProfile();
             }
         } catch (error) {
             console.error(error);
@@ -140,7 +139,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 throw new Error(response.data.message || 'Login failed');
             }
         } catch (error: any) {
-            console.error('Login error:', error.response?.data || error.message);
+            // console.error('Login error:', error.response?.data || error.message);
             const errorMsg = error.response?.data?.message || (typeof error.response?.data === 'string' ? error.response?.data : null) || error.message || 'Login failed';
             throw new Error(errorMsg);
         }
@@ -201,6 +200,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await AsyncStorage.removeItem('accessToken');
             await AsyncStorage.removeItem('refreshToken');
             setUser(null);
+            setParentProfile(null);
         } catch (error) {
             console.error(error);
         }
@@ -212,10 +212,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             let response;
             if (user?.user_type === 'nanhe_patrakar') {
-                console.log('🔄 AuthContext: Updating Parent Profile...');
+                // console.log('🔄 AuthContext: Updating Parent Profile...');
                 response = await updateParentProfile(data);
             } else {
-                console.log('🔄 AuthContext: Updating Normal User Profile...');
+                // console.log('🔄 AuthContext: Updating Normal User Profile...');
                 response = await updateNormalProfile(data);
             }
 
@@ -234,7 +234,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const updateUserType = async (newType: string) => {
         try {
-            console.log('🔄 AuthContext: Attempting to update user_type to:', newType);
+            // console.log('🔄 AuthContext: Attempting to update user_type to:', newType);
             
             // 1. Update AsyncStorage
             const currentUserStr = await AsyncStorage.getItem('user');
@@ -250,7 +250,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     // If state was null, maybe we can reconstruct from storage
                     return prevUser; 
                 }
-                console.log('✅ AuthContext: State updated for user:', prevUser.id);
+                // console.log('✅ AuthContext: State updated for user:', prevUser.id);
                 return { ...prevUser, user_type: newType };
             });
 
@@ -263,15 +263,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             const token = await AsyncStorage.getItem('accessToken');
             if (!token) {
-                console.log('ℹ️ AuthContext: No token found, skipping profile refresh.');
+                // console.log('ℹ️ AuthContext: No token found, skipping profile refresh.');
                 return;
             }
 
-            console.log('🔄 AuthContext: Refreshing Profile Data...');
+            // console.log('🔄 AuthContext: Refreshing Profile Data...');
             const { getParentProfile } = require('../api/server');
             const response = await getParentProfile();
             
-            console.log('📡 AuthContext: Parent Profile API Response:', JSON.stringify(response.data, null, 2));
+            // console.log('📡 AuthContext: Parent Profile API Response:', JSON.stringify(response.data, null, 2));
 
             if (response.data && response.data.status) {
                 const data = response.data.data;
@@ -290,7 +290,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
                         user_type: (data.profile_exists || data.parent_profile) ? 'nanhe_patrakar' : user?.user_type
                     };
-                    console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
+                    // console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
                     setUser(updatedUser);
                     await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
                 }
@@ -298,7 +298,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // Update Parent Profile info
                 // EDITED: Relaxed condition - if parent_profile data exists, use it (even if profile_exists is false - e.g. payment pending)
                 if (data.parent_profile) {
-                    console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
+                    // console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
                     setParentProfile(data.parent_profile);
                     
                     // Ensure user_type is updated

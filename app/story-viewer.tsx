@@ -1,24 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  Dimensions, 
-  TouchableOpacity, 
-  StatusBar, 
-  SafeAreaView,
-  TouchableWithoutFeedback,
-  Animated,
-  Platform,
-  FlatList,
-  ViewToken,
-  ActivityIndicator,
-  PanResponder
-} from 'react-native';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  PanResponder,
+  Platform,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  ViewToken
+} from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 44; // Safe fallback
@@ -27,7 +26,7 @@ const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight ||
 const STORIES = [
   {
     id: '1',
-    user: 'DXB News',
+    user: 'Jan Himachal',
     avatar: 'https://img.freepik.com/free-vector/breaking-news-concept_23-2148514216.jpg',
     items: [
       { id: 's1', type: 'image', url: 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg', duration: 5000 },
@@ -389,7 +388,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     color: '#fff',
-    fontWeight: 'Bold', // Fix capitalization
     fontWeight: '700',
     fontSize: 14,
     marginRight: 10,

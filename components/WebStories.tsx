@@ -1,14 +1,14 @@
-import React from 'react';
-import { ScrollView, StyleSheet, View, Image, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Static Data for Web Stories
 const STATIC_STORIES = [
   {
     id: '1',
-    user: 'DXB News',
+    user: 'Jan Himachal',
     avatar: 'https://img.freepik.com/free-vector/breaking-news-concept_23-2148514216.jpg',
     items: [
       { id: 's1', type: 'image', url: 'https://images.pexels.com/photos/3760067/pexels-photo-3760067.jpeg', duration: 3000 },

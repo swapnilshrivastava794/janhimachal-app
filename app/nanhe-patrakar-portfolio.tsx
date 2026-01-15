@@ -5,10 +5,13 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Print from 'expo-print';
 import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import * as Sharing from 'expo-sharing';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -16,6 +19,7 @@ import {
     Image,
     Platform,
     ScrollView,
+    Share,
     StatusBar,
     StyleSheet,
     Text,
@@ -24,6 +28,7 @@ import {
 } from 'react-native';
 import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
@@ -45,18 +50,96 @@ export default function NanhePatrakarPortfolioScreen() {
         message: string;
     }>({ ready: false, message: '' });
 
-    useEffect(() => {
-        if (user) {
-            fetchPortfolioData();
-            // Also check parentProfile status from Context
-            if (parentProfile?.status === 'PAYMENT_COMPLETED') {
-                setIsPaid(true);
+    // Refresh data when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                fetchPortfolioData();
+                if (parentProfile?.status === 'PAYMENT_COMPLETED') {
+                    setIsPaid(true);
+                }
+            } else if (!authLoading) {
+                setIsLoading(false);
             }
-        } else if (!authLoading) {
-            // If auth is done and no user found, stop portfolio loading
-            setIsLoading(false);
+        }, [user, authLoading, parentProfile])
+    );
+
+    const generateCertificatePDF = async () => {
+        if (!childProfile) return;
+        
+        try {
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body {
+                            font-family: 'Georgia', serif;
+                            padding: 40px;
+                            background: linear-gradient(135deg, #fdfcfb 0%, #e2d1c3 100%);
+                        }
+                        .certificate {
+                            border: 3px solid #D4AF37;
+                            padding: 40px;
+                            text-align: center;
+                            background: rgba(255,255,255,0.9);
+                        }
+                        .header { color: #D4AF37; font-size: 24px; margin-bottom: 10px; }
+                        .org-name { font-size: 28px; font-weight: bold; color: #1A1A1A; letter-spacing: 3px; }
+                        .sub-header { font-size: 14px; color: #666; margin-top: 5px; }
+                        .title { font-size: 36px; font-weight: bold; color: #1A1A1A; margin: 30px 0; }
+                        .user-name { font-size: 28px; color: #E31E24; font-weight: bold; text-decoration: underline; margin: 20px 0; }
+                        .body-text { font-size: 16px; color: #444; line-height: 1.8; margin: 20px 40px; }
+                        .footer { display: flex; justify-content: space-between; margin-top: 50px; padding: 0 40px; }
+                        .sign-box { text-align: center; }
+                        .sign-line { width: 150px; border-top: 1px solid #999; margin: 10px auto; }
+                        .sign-label { font-size: 12px; color: #888; }
+                    </style>
+                </head>
+                <body>
+                    <div class="certificate">
+                        <div class="header">🎖️</div>
+                        <div class="org-name">JAN HIMACHAL</div>
+                        <div class="sub-header">नन्हा पत्रकार कार्यक्रम</div>
+                        <div class="title">प्रमाण-पत्र</div>
+                        <p>यह प्रमाणित किया जाता है कि</p>
+                        <div class="user-name">${childProfile.name?.toUpperCase() || 'STUDENT'}</div>
+                        <p class="body-text">
+                            ने जन हिमाचल के 'नन्हे पत्रकार' कार्यक्रम में सफलतापूर्वक अपना पंजीकरण कराया है 
+                            और उन्हें एक सक्रिय बाल पत्रकार के रूप में मान्यता दी जाती है।
+                        </p>
+                        <div class="footer">
+                            <div class="sign-box">
+                                <div class="sign-line"></div>
+                                <div class="sign-label">संपादक, जन हिमाचल</div>
+                            </div>
+                            <div class="sign-box">
+                                <div class="sign-line"></div>
+                                <div class="sign-label">तिथी: ${new Date().toLocaleDateString('hi-IN')}</div>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            const { uri } = await Print.printToFileAsync({ html: htmlContent });
+            
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Certificate Download',
+                    UTI: 'com.adobe.pdf'
+                });
+            } else {
+                Alert.alert('Success', `PDF saved at: ${uri}`);
+            }
+        } catch (error) {
+            console.error('PDF Error:', error);
+            Alert.alert('Error', 'PDF बनाने में समस्या हुई');
         }
-    }, [user, authLoading, parentProfile]);
+    };
 
     const fetchPortfolioData = async () => {
         try {
@@ -364,7 +447,19 @@ export default function NanhePatrakarPortfolioScreen() {
                     <Ionicons name="chevron-back" size={28} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: theme.text }]}>Portfolio & Identity</Text>
-                <TouchableOpacity style={styles.settingsButton}>
+                <TouchableOpacity 
+                    style={styles.settingsButton}
+                    onPress={async () => {
+                        try {
+                            await Share.share({
+                                message: `${childProfile?.name || 'मेरा बच्चा'} जन हिमाचल के "नन्हे पत्रकार" कार्यक्रम का सदस्य है! 🎉\n\nJan Himachal - Voice of Himachal`,
+                                title: 'नन्हा पत्रकार Portfolio'
+                            });
+                        } catch (error) {
+                            console.log('Share error:', error);
+                        }
+                    }}
+                >
                     <Ionicons name="share-social-outline" size={24} color={theme.text} />
                 </TouchableOpacity>
             </View>
@@ -488,7 +583,9 @@ export default function NanhePatrakarPortfolioScreen() {
                             </View>
                         </View>
                     </LinearGradient>
-                    <TouchableOpacity style={[styles.downloadBtn, { backgroundColor: theme.primary }]}>
+                    <TouchableOpacity style={[styles.downloadBtn, { backgroundColor: theme.primary }]}
+                    onPress={generateCertificatePDF}
+                    >
                         <Ionicons name="cloud-download-outline" size={20} color="#fff" />
                         <Text style={styles.downloadBtnText}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
                     </TouchableOpacity>
@@ -497,7 +594,10 @@ export default function NanhePatrakarPortfolioScreen() {
 
                 <View style={styles.portfolioHeader}>
                     <Text style={[styles.sectionHeading, { color: theme.text, marginBottom: 0, marginTop: 40 }]}>मेरी रचनाएं (Portfolio)</Text>
-                    <TouchableOpacity style={{ marginTop: 40 }}>
+                    <TouchableOpacity 
+                        style={{ marginTop: 40 }}
+                        onPress={() => router.push('/nanhe-patrakar-hub' as any)}
+                    >
                         <Text style={{ color: theme.primary, fontWeight: '700' }}>सब देखें</Text>
                     </TouchableOpacity>
                 </View>

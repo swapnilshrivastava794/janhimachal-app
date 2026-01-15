@@ -24,6 +24,7 @@ import {
     View
 } from 'react-native';
 import LoginScreen from '../auth/login';
+import constant from '@/constants/constant';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
@@ -186,7 +187,7 @@ export default function ProfileScreen() {
                         style={styles.avatar} 
                     />
                     <TouchableOpacity style={styles.cameraBadge}>
-                        <Ionicons name="camera" size={14} color="#fff" />
+                        <Ionicons name="star" size={14} color="#fff" />
                     </TouchableOpacity>
                 </View>
                 <View style={styles.userMeta}>
@@ -220,7 +221,7 @@ export default function ProfileScreen() {
                         >
                             <View style={styles.prideTop}>
                                 <Image 
-                                    source={{ uri: child.photo ? `https://janhimachal.com${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }} 
+                                    source={{ uri: child.photo ? `${constant.appBaseUrl}${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }} 
                                     style={styles.childAvatar} 
                                 />
                                 <View style={{ flex: 1 }}>

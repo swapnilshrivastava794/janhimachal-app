@@ -1,15 +1,13 @@
+import { getNews } from '@/api/server';
 import { NewsCard } from '@/components/NewsCard';
-import { TopPickCard } from '@/components/TopPickCard';
-import { BREAKING_NEWS, POPULAR_NEWS, RECENT_POSTS, TOP_PICKS, TOP_STORIES } from '@/constants/news-data';
 import { Colors } from '@/constants/theme';
+import { useCategory } from '@/context/CategoryContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { ActivityIndicator, Dimensions, FlatList, Image, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { getNews } from '@/api/server';
-import { useCategory } from '@/context/CategoryContext';
 
 const { width } = Dimensions.get('window');
 
@@ -158,6 +156,7 @@ export default function PostIndexScreen() {
             category={item.category || 'News'}
             author={item.posted_by || item.author}
             date={item.post_date || item.date}
+            shareUrl={item.share_url}
             onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
         />
      );

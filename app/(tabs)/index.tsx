@@ -133,6 +133,8 @@ export default function HomeScreen() {
           mixedMap.set(item.id, item);
       });
       const mixedNews = Array.from(mixedMap.values());
+      const breakingRes = await getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 });
+      setBreakingSectionNews(breakingRes.results || breakingRes || []);
       
       // Fetch Nanhe Patrakar Spotlight Stories
       const nanheRes = await getSubmissions({ status: 'Approved', limit: 5 });
@@ -327,11 +329,12 @@ export default function HomeScreen() {
                     <NewsCard
                         title={item.post_title || item.title}
                         image={item.image}
-                        category={item.category || "UAE News"}
+                        category={item.category || "News"}
                         author={item.posted_by || item.author || "Unknown"}
                         date={item.post_date || item.date}
+                        shareUrl={item.share_url}
                         onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                        width="100%" // Let parent control width
+                        width="100%"
                     />
                     </View>
                 ))}
@@ -357,6 +360,7 @@ export default function HomeScreen() {
                         category={item.category || "Recent"}
                         author={item.posted_by || item.author || "Unknown"}
                         date={item.post_date || item.date}
+                        shareUrl={item.share_url}
                         onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
                     />
                     ))}
@@ -381,6 +385,7 @@ export default function HomeScreen() {
                         category="Top Pick" 
                         author={item.posted_by || item.author || "Unknown"}
                         date={item.post_date || item.date}
+                        shareUrl={item.share_url}
                         onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
                     />
                     ))}
@@ -406,6 +411,7 @@ export default function HomeScreen() {
                         category={item.category || "Popular"}
                         author={item.posted_by || item.author || "Unknown"}
                         date={item.post_date || item.date}
+                        shareUrl={item.share_url}
                         onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
                     />
                     ))}
@@ -431,6 +437,7 @@ export default function HomeScreen() {
                         category="Article"
                         author={item.posted_by || item.author || "Unknown"}
                         date={item.post_date || item.date}
+                        shareUrl={item.share_url}
                         onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
                     />
                     ))}
