@@ -101,6 +101,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
+            console.log("🚀 Login API Request:");
+            console.log("🔗 URL:", `${constant.appBaseUrl}/api/nanhe-patrakar/login/`);
+            console.log("📦 Payload:", { username: email, password: password });
+
             const formData = new FormData();
             formData.append('username', email); // Using email as username
             formData.append('password', password);

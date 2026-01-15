@@ -219,8 +219,8 @@ export default function NanhePatrakarSubmissionScreen() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: type === 'images' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-            allowsEditing: type === 'images', 
-            quality: 0.7, // Initial quality before manipulation
+            allowsEditing: false,
+            quality: 0.7,
             videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
         });
 
@@ -248,7 +248,7 @@ export default function NanhePatrakarSubmissionScreen() {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: type === 'images' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-            allowsEditing: type === 'images',
+            allowsEditing: false,
             quality: 0.7,
             videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
         });

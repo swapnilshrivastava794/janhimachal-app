@@ -150,11 +150,10 @@ export default function NanhePatrakarRegistrationScreen() {
           text: "Camera", 
           onPress: async () => {
             const result = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [4, 3],
+              allowsEditing: false,
               quality: 0.7,
             });
-            if (!result.canceled) {
+            if (!result.canceled && result.assets && result.assets.length > 0) {
               if (type === 'parent') setParentIdProof(result.assets[0].uri);
               else setChildIdProof(result.assets[0].uri);
             }
@@ -164,12 +163,11 @@ export default function NanhePatrakarRegistrationScreen() {
           text: "Gallery", 
           onPress: async () => {
             const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'], // Updated from MediaTypeOptions
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5,
-        });
-            if (!result.canceled) {
+              mediaTypes: ImagePicker.MediaTypeOptions.Images, // Corrected Enum usage
+              allowsEditing: false,
+              quality: 0.6,
+            });
+            if (!result.canceled && result.assets && result.assets.length > 0) {
               if (type === 'parent') setParentIdProof(result.assets[0].uri);
               else setChildIdProof(result.assets[0].uri);
             }

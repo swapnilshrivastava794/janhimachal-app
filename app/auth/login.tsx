@@ -1,11 +1,11 @@
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -19,6 +19,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -55,7 +56,7 @@ export default function LoginScreen() {
                     <Ionicons name="person-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                     <TextInput 
                         style={[styles.input, { color: theme.text }]}
-                        placeholder="ईमेल या यूजरनेम (Email / Username)"
+                        placeholder="यूजरनेम (Username)"
                         placeholderTextColor={theme.placeholderText}
                         value={email}
                         onChangeText={setEmail}
@@ -69,15 +70,18 @@ export default function LoginScreen() {
                         style={[styles.input, { color: theme.text }]}
                         placeholder="पासवर्ड (Password)"
                         placeholderTextColor={theme.placeholderText}
-                        secureTextEntry
+                        secureTextEntry={!showPassword}
                         value={password}
                         onChangeText={setPassword}
                     />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                        <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.placeholderText} />
+                    </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity style={styles.forgotBtn}>
+                {/* <TouchableOpacity style={styles.forgotBtn}>
                     <Text style={[styles.forgotText, { color: theme.primary }]}>पासवर्ड भूल गए? (Forgot Password?)</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <TouchableOpacity 
                     style={[styles.loginBtn, isLoggingIn && { opacity: 0.7 }]}

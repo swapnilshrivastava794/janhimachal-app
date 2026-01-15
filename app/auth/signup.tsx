@@ -88,6 +88,9 @@ export default function SignupScreen() {
                         onChangeText={setUsername}
                     />
                 </View>
+                <Text style={{ fontSize: 11, color: theme.primary, marginTop: -8, marginBottom: 12, marginLeft: 4 }}>
+                    * कृपया अपना यूजरनेम याद रखें, भविष्य में लॉगिन के लिए (Remember your username for future login)
+                </Text>
 
                 <View style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
                     <Ionicons name="mail-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />

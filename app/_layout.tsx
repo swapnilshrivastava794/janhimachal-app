@@ -32,6 +32,8 @@ export default function RootLayout() {
             <Stack.Screen name="payment-success" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
             <Stack.Screen name="notifications" options={{ headerShown: false }} />
+            <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="story-viewer" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

@@ -45,7 +45,7 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     // IF 401 Unauthorized AND NOT already retried
-    const isLoginRequest = originalRequest.url && originalRequest.url.includes("api/auth/login");
+    const isLoginRequest = originalRequest.url && (originalRequest.url.includes("api/nanhe-patrakar/login/") || originalRequest.url.includes("api/auth/login/"));
     
     if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       originalRequest._retry = true;
