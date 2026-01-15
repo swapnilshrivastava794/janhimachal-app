@@ -3,6 +3,7 @@ import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import RazorpayCheckout from '@/utils/razorpay';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -25,7 +26,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
