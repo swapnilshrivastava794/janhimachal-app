@@ -1,10 +1,10 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Easing, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
 import { getNews } from '@/api/server';
+import { useRouter } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 
 // Initial placeholder, will be replaced by API data
@@ -75,7 +75,7 @@ export function BreakingNewsTicker() {
   return (
     <View style={[styles.container, { backgroundColor: theme.subcategoryBg }]}>
       <View style={[styles.labelContainer, { backgroundColor: theme.accent }]}>
-        <Text style={styles.labelText}>BREAKING</Text>
+        <Text style={[styles.labelText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>BREAKING</Text>
       </View>
       <View style={styles.tickerContainer}>
         <View 

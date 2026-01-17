@@ -263,7 +263,7 @@ export default function NanhePatrakarHubScreen() {
                                 { backgroundColor: activeFilter === 'All' ? theme.primary : ((theme as any).card || theme.background) }
                             ]}
                         >
-                            <Text style={[styles.filterText, { color: activeFilter === 'All' ? '#fff' : theme.text }]}>All</Text>
+                            <Text style={[styles.filterText, { color: activeFilter === 'All' ? (colorScheme === 'dark' ? '#000' : '#fff') : theme.text }]}>All</Text>
                         </TouchableOpacity>
 
                         {/* Show dynamic topics */}
@@ -276,7 +276,7 @@ export default function NanhePatrakarHubScreen() {
                                     { backgroundColor: activeFilter === t.title ? theme.primary : ((theme as any).card || theme.background) }
                                 ]}
                             >
-                                <Text style={[styles.filterText, { color: activeFilter === t.title ? '#fff' : theme.text }]}>
+                                <Text style={[styles.filterText, { color: activeFilter === t.title ? (colorScheme === 'dark' ? '#000' : '#fff') : theme.text }]}>
                                     {t.title_hindi || t.title}
                                 </Text>
                             </TouchableOpacity>

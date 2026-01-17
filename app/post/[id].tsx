@@ -248,10 +248,17 @@ export default function ArticleDetailScreen() {
                 </View>
             )}
             
-            {/* Ad Placeholder */}
-            <View style={styles.adPlaceholder}>
-                <Text style={styles.adText}>Advertisement</Text>
-            </View>
+            {/* Ad Placeholder - Nanhe Patrakar */}
+            <TouchableOpacity 
+                activeOpacity={0.9} 
+                onPress={() => router.push('/nanhe-patrakar-hub' as any)}
+                style={{ marginBottom: 20, borderRadius: 12, overflow: 'hidden', elevation: 2 }}
+            >
+                <Image 
+                    source={require('@/assets/nanhe-patarkar.jpg')} 
+                    style={{ width: '100%', height: 200, resizeMode: 'contain' }} 
+                />
+            </TouchableOpacity>
         </View>
 
         <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />

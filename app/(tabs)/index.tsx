@@ -3,7 +3,6 @@ import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
 import { ToastNotification } from '@/components/ToastNotification';
-import { WebStories } from '@/components/WebStories';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -345,7 +344,7 @@ export default function HomeScreen() {
         {selectedCategoryName && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
+              <Text style={{ color: colorScheme === 'dark' ? '#000' : '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
             </View>
           </View>
         )}

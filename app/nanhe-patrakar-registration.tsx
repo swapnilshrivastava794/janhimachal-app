@@ -396,7 +396,7 @@ export default function NanhePatrakarRegistrationScreen() {
             <View style={styles.authPromptWrapper}>
                 <View style={[styles.authCard, { backgroundColor: theme.primary + '08', borderColor: theme.borderColor }]}>
                     <View style={[styles.authIconCircle, { backgroundColor: theme.primary }]}>
-                        <Ionicons name="lock-closed" size={32} color="#fff" />
+                        <Ionicons name="lock-closed" size={32} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                     </View>
                     <Text style={[styles.authTitle, { color: theme.text }]}>लॉगिन आवश्यक है</Text>
                     <Text style={[styles.authDesc, { color: theme.text }]}>
@@ -410,8 +410,8 @@ export default function NanhePatrakarRegistrationScreen() {
                             params: { redirect: '/nanhe-patrakar-registration' }
                         } as any)}
                     >
-                        <Text style={styles.authLoginBtnText}>लॉगिन / साइन-अप करें</Text>
-                        <Ionicons name="arrow-forward" size={18} color="#fff" />
+                        <Text style={[styles.authLoginBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>लॉगिन / साइन-अप करें</Text>
+                        <Ionicons name="arrow-forward" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                     </TouchableOpacity>
 
                     <TouchableOpacity 
@@ -496,7 +496,7 @@ export default function NanhePatrakarRegistrationScreen() {
             {/* --- Info Card --- */}
             <View style={[styles.infoCard, { backgroundColor: theme.primary + '08' }]}>
                 <View style={styles.infoBadge}>
-                    <Text style={[styles.infoBadgeText, { color: theme.primary }]}>EDITORIAL PROGRAM</Text>
+                    <Text style={[styles.infoBadgeText, { color: '#000' }]}>EDITORIAL PROGRAM</Text>
                 </View>
                 <Text style={[styles.mainTitle, { color: theme.text }]}>नन्हे पत्रकार क्या है?</Text>
                 <Text style={[styles.mainDesc, { color: theme.text }]}>
@@ -701,10 +701,10 @@ export default function NanhePatrakarRegistrationScreen() {
             <View style={styles.sectionSpacer} />
             <View style={[styles.feeCard, { backgroundColor: theme.primary }]}>
                 <View style={styles.feeTop}>
-                    <Text style={styles.feeTitle}>सहभागिता शुल्क</Text>
-                    <Text style={styles.feePrice}>₹599</Text>
+                    <Text style={[styles.feeTitle, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>सहभागिता शुल्क</Text>
+                    <Text style={[styles.feePrice, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹599</Text>
                 </View>
-                <Text style={styles.feeNote}>शामिल है: संपादकीय समीक्षा, डिजिटल प्रमाण-पत्र और प्रकाशन अवसर</Text>
+                <Text style={[styles.feeNote, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>शामिल है: संपादकीय समीक्षा, डिजिटल प्रमाण-पत्र और प्रकाशन अवसर</Text>
             </View>
 
             <TouchableOpacity 
@@ -723,9 +723,9 @@ export default function NanhePatrakarRegistrationScreen() {
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colorScheme === 'dark' ? '#000' : '#fff'} />
                 ) : (
-                    <Text style={styles.finalBtnText}>
+                    <Text style={[styles.finalBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>
                         {isEnrolled ? "भुगतान पुनः प्रयास करें (Retry Payment)" : "रजिस्टर करें और भुगतान करें"}
                     </Text>
                 )}

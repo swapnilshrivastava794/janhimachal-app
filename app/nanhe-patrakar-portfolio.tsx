@@ -321,8 +321,8 @@ export default function NanhePatrakarPortfolioScreen() {
                             style={[styles.authLoginBtn, { backgroundColor: theme.primary }]}
                             onPress={() => router.push('/auth/login' as any)}
                         >
-                            <Text style={styles.authLoginBtnText}>लॉगिन करें</Text>
-                            <Ionicons name="arrow-forward" size={18} color="#fff" />
+                            <Text style={[styles.authLoginBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>लॉगिन करें</Text>
+                            <Ionicons name="arrow-forward" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => router.back()} style={styles.authCancelBtn}>
                             <Text style={[styles.authCancelText, { color: theme.placeholderText }]}>वापस जाएं</Text>
@@ -419,7 +419,26 @@ export default function NanhePatrakarPortfolioScreen() {
         );
     }
 
+    // Safety check: If paid but no childProfile loaded yet, it might mean they haven't created one.
+    // Logic: isPaid (from parentProfile) is TRUE, but childProfile (from getMyChildProfiles) is NULL.
+    // We should prompt them to creating a profile.
     // Safety check: If paid but no childProfile loaded yet, show loading
+    if (!childProfile) {
+        return (
+            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text style={{ marginTop: 10, color: theme.text }}>प्रोफ़ाइल डेटा लोड हो रहा है...</Text>
+                <TouchableOpacity 
+                    onPress={() => fetchPortfolioData()}
+                    style={{ marginTop: 20, padding: 12, backgroundColor: theme.primary + '15', borderRadius: 10 }}
+                >
+                    <Text style={{ color: theme.primary, fontWeight: '700' }}>पुनः प्रयास करें</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    // Standard loading check
     if (!childProfile) {
         return (
             <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
@@ -541,8 +560,8 @@ export default function NanhePatrakarPortfolioScreen() {
                             onPress={() => router.push('/nanhe-patrakar-submission' as any)}
                             style={[styles.submitNowBtn, { backgroundColor: theme.primary }]}
                         >
-                            <Ionicons name="create-outline" size={18} color="#fff" />
-                            <Text style={styles.submitNowBtnText}>अभी खबर भेजें</Text>
+                            <Ionicons name="create-outline" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                            <Text style={[styles.submitNowBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>अभी खबर भेजें</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -586,8 +605,8 @@ export default function NanhePatrakarPortfolioScreen() {
                     <TouchableOpacity style={[styles.downloadBtn, { backgroundColor: theme.primary }]}
                     onPress={generateCertificatePDF}
                     >
-                        <Ionicons name="cloud-download-outline" size={20} color="#fff" />
-                        <Text style={styles.downloadBtnText}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
+                        <Ionicons name="cloud-download-outline" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                        <Text style={[styles.downloadBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
                     </TouchableOpacity>
                 </TouchableOpacity>
                 )}
