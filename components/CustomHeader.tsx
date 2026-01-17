@@ -1,15 +1,14 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useRouter } from 'expo-router';
 
 import { getCategories } from '@/api/server';
 import { useCategory } from '@/context/CategoryContext';
 
 import { BreakingNewsTicker } from '@/components/BreakingNewsTicker';
-import { WebStories } from '@/components/WebStories';
 import { WeatherWidget } from '@/components/WeatherWidget';
 
 // ... (Imports and CATEGORY_DATA remain same)
@@ -18,8 +17,34 @@ export function CustomHeader() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedCategoryName, setSelectedCategoryName, selectedSubcategoryId, setSelectedSubcategoryId } = useCategory();
-  const [categories, setCategories] = React.useState<any[]>([]);
+  const { selectedCategoryName, setSelectedCategoryName, selectedSubcategoryId, setSelectedSubcategoryId, categories, setCategories } = useCategory();
+  const categoryScrollRef = React.useRef<ScrollView>(null);
+  const subCategoryScrollRef = React.useRef<ScrollView>(null);
+
+  // Auto-scroll effect for Categories/Subcategories
+  React.useEffect(() => {
+    // Scroll subcategory into view
+    if (subCategoryScrollRef.current && selectedSubcategoryId && categories.length > 0) {
+       const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
+       const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
+       if (index !== -1) {
+          // Estimate position (assuming ~100px width per item)
+          // For more precision, we'd use onLayout, but this is a rough "scroll to make visible"
+           subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
+       }
+    }
+  }, [selectedSubcategoryId]);
+
+  React.useEffect(() => {
+    // Scroll main category into view
+    if (categoryScrollRef.current && selectedCategoryName && categories.length > 0) {
+        const index = categories.findIndex(c => c.cat_name === selectedCategoryName);
+        if (index !== -1) {
+            categoryScrollRef.current.scrollTo({ x: index * 90, animated: true });
+        }
+    }
+  }, [selectedCategoryName]);
+
 
   React.useEffect(() => {
     fetchCategories();
@@ -97,6 +122,7 @@ export function CustomHeader() {
         {/* Categories Tabs */}
         <View>
           <ScrollView 
+            ref={categoryScrollRef}
             horizontal 
             showsHorizontalScrollIndicator={false} 
             style={[styles.categoriesContainer, { backgroundColor: theme.categoryBg }]}
@@ -116,6 +142,7 @@ export function CustomHeader() {
           {/* Subcategories */}
           {activeSubcategories.length > 0 && (
             <ScrollView 
+              ref={subCategoryScrollRef}
               horizontal 
               showsHorizontalScrollIndicator={false} 
               style={[styles.subcategoriesContainer, { backgroundColor: theme.subcategoryBg }]}

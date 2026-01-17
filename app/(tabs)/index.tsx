@@ -2,6 +2,8 @@ import { getNews, getSubmissions } from '@/api/server';
 import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
+import { ToastNotification } from '@/components/ToastNotification';
+import { WebStories } from '@/components/WebStories';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +21,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedSubcategoryId, selectedCategoryName } = useCategory();
+  const { selectedSubcategoryId, selectedCategoryName, nextSubCategory, getNextCategoryInfo, categories } = useCategory();
   const { user, parentProfile, refreshProfile } = useAuth();
   
   const [topStories, setTopStories] = useState<any[]>([]);
@@ -30,6 +32,9 @@ export default function HomeScreen() {
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showLongLoading, setShowLongLoading] = useState(false);
   
   // ScrollView ref for auto-scrolling when category changes
   const scrollViewRef = useRef<ScrollView>(null);
@@ -61,6 +66,27 @@ export default function HomeScreen() {
         setTimeout(() => {
           scrollViewRef.current?.scrollTo({ y: topStoriesYPosition.current - 10, animated: true });
         }, 300);
+      }
+      
+      // Reset long loading state when category changes
+      setShowLongLoading(false);
+
+      // Show Toast Notification
+
+      // Show Toast Notification
+      let subName = '';
+      if (categories) {
+          for (const cat of categories) {
+             const sub = cat.sub_categories?.find((s: any) => s.id === selectedSubcategoryId);
+             if (sub) {
+                 subName = sub.subcat_name;
+                 break;
+             }
+          }
+      }
+      if (subName) {
+          setToastMessage(`Now reading: ${subName}`);
+          setToastVisible(true);
       }
     }
   }, [selectedSubcategoryId]); // Refetch when subcategory changes
@@ -146,8 +172,21 @@ export default function HomeScreen() {
       console.log('Error fetching home data:', e);
     } finally {
       setIsLoading(false);
+      setShowLongLoading(false);
     }
   };
+
+  useEffect(() => {
+    let timer: any;
+    if (isLoading) {
+        timer = setTimeout(() => {
+            setShowLongLoading(true);
+        }, 2000); // Show "Please Wait" if loading takes > 2s
+    } else {
+        setShowLongLoading(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const handleViewAll = (title: string, type: string) => {
     router.push({ pathname: '/post' as any, params: { title, type } });
@@ -160,11 +199,24 @@ export default function HomeScreen() {
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const isCloseToBottom = ({layoutMeasurement, contentOffset, contentSize}: any) => {
+    const paddingToBottom = 50; // Trigger slightly before exact bottom
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+  };
+
   return (
-    <ScrollView 
-      ref={scrollViewRef}
+    <View style={{ flex: 1 }}>
+        <ScrollView 
+          ref={scrollViewRef}
       style={[styles.container, { backgroundColor: theme.background }]}
+      onMomentumScrollEnd={({nativeEvent}) => {
+        if (isCloseToBottom(nativeEvent)) {
+            nextSubCategory();
+        }
+      }}
+      scrollEventThrottle={400}
     >
+      {/* <WebStories /> */}
       
       {/* Cinematic Nanhe Patrakar Dash Banner */}
       <TouchableOpacity 
@@ -215,7 +267,7 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Impact Stats Section */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
+      {/* <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
           <View style={{ alignItems: 'center' }}>
               <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>5,000+</Text>
               <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>सक्रिय पत्रकार</Text>
@@ -230,7 +282,7 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>50+</Text>
               <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>ज़िले कवर</Text>
           </View>
-      </View>
+      </View> */}
 
       {/* Nanhe Patrakar Spotlight Section */}
       {nanhePatrakarStories.length > 0 && (
@@ -295,7 +347,6 @@ export default function HomeScreen() {
             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
               <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
             </View>
-            <Text style={{ color: theme.placeholderText, fontSize: 11 }}>की खबरें</Text>
           </View>
         )}
         <SectionHeader 
@@ -346,7 +397,7 @@ export default function HomeScreen() {
 
       {/* 2. Recent Post Section */}
       <View style={styles.sectionContainer}>
-        <SectionHeader title="Recent Post" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
+        <SectionHeader title="Recent News" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
         <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
             {isLoading ? (
                 [1, 2].map(i => <NewsSkeleton key={i} />)
@@ -474,6 +525,21 @@ export default function HomeScreen() {
       </View>
 
     </ScrollView>
+    
+    {/* Long Loading Indicator */}
+    {showLongLoading && isLoading && (
+        <View style={{ position: 'absolute', bottom: 80, alignSelf: 'center', backgroundColor: theme.card, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 3.84, elevation: 5 }}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>Taking longer than usual... Please wait</Text>
+        </View>
+    )}
+
+    <ToastNotification 
+        message={toastMessage} 
+        isVisible={toastVisible} 
+        onHide={() => setToastVisible(false)} 
+    />
+    </View>
   );
 }
 
