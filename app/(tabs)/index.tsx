@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -34,6 +34,9 @@ export default function HomeScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showLongLoading, setShowLongLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
+  const [showUpdateBadge, setShowUpdateBadge] = useState(false);
   
   // ScrollView ref for auto-scrolling when category changes
   const scrollViewRef = useRef<ScrollView>(null);
@@ -90,9 +93,9 @@ export default function HomeScreen() {
     }
   }, [selectedSubcategoryId]); // Refetch when subcategory changes
 
-  const fetchData = async () => {
+  const fetchData = async (useSkeleton = true) => {
     if (!selectedSubcategoryId) return;
-    setIsLoading(true);
+    if (useSkeleton) setIsLoading(true);
     try {
       // Helper to fetch with fallback to 'latest' if empty
       const fetchSectionData = async (primaryParams: any, fallbackLimit: number = 5) => {
@@ -118,51 +121,47 @@ export default function HomeScreen() {
           }
       };
 
-      const topRes = await getNews({ subcategory_id: selectedSubcategoryId, limit: 10 });
-      setTopStories(topRes.results || topRes || []);
-
-      const recentData = await fetchSectionData(
+      // Execute all requests in parallel
+      const [
+        topRes,
+        recentData,
+        trendingData,
+        popularData,
+        articlesSectionData,
+        breakingRes,
+        nanheRes
+      ] = await Promise.all([
+        getNews({ subcategory_id: selectedSubcategoryId, limit: 10 }),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, latest: '1', headlines: '1', limit: 5 }, 
           5
-      );
-      setRecentPosts(recentData);
-
-      const trendingData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, trending: '1', limit: 5 },
           5
-      );
-      setTopPicks(trendingData);
-
-      const popularData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, headlines: '1', trending: '1', limit: 5 },
           5
-      );
-      setPopularNews(popularData);
-
-      const articlesSectionData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, articles: '1', trending: '1', latest: '1', limit: 10 },
           10
-      );
-      setArticlesData(articlesSectionData);
-
-      const [latestMixRes, trendingMixRes] = await Promise.all([
-          getNews({ subcategory_id: selectedSubcategoryId, latest: '1', limit: 4 }),
-          getNews({ subcategory_id: selectedSubcategoryId, trending: '1', limit: 4 })
+        ),
+        getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 }),
+        getSubmissions({ status: 'Approved', limit: 5 })
       ]);
-      
-      const latestItems = latestMixRes.results || latestMixRes || [];
-      const trendingItems = trendingMixRes.results || trendingMixRes || [];
-      
-      const mixedMap = new Map();
-      [...latestItems, ...trendingItems].forEach(item => {
-          mixedMap.set(item.id, item);
-      });
-      const mixedNews = Array.from(mixedMap.values());
-      const breakingRes = await getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 });
+
+      setTopStories(topRes.results || topRes || []);
+      setRecentPosts(recentData);
+      setTopPicks(trendingData);
+      setPopularNews(popularData);
+      setArticlesData(articlesSectionData);
       setBreakingSectionNews(breakingRes.results || breakingRes || []);
       
-      // Fetch Nanhe Patrakar Spotlight Stories
-      const nanheRes = await getSubmissions({ status: 'Approved', limit: 5 });
+      setLastFetchTime(Date.now());
+      setShowUpdateBadge(false);
+
       if (nanheRes.data && nanheRes.data.status) {
           setNanhePatrakarStories(nanheRes.data.data.results || []);
       }
@@ -170,9 +169,36 @@ export default function HomeScreen() {
     } catch (e) {
       console.log('Error fetching home data:', e);
     } finally {
-      setIsLoading(false);
+      if (useSkeleton) setIsLoading(false);
       setShowLongLoading(false);
     }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData(false);
+    setRefreshing(false);
+  }, [fetchData]);
+
+  // Smart Reload Logic: Check every minute if data is stale (> 5 mins)
+  useEffect(() => {
+    const interval = setInterval(() => {
+        const timeSinceLastFetch = Date.now() - lastFetchTime;
+        // 5 minutes threshold (300000 ms)
+        if (timeSinceLastFetch > 300000 && !isLoading && !refreshing) {
+            setShowUpdateBadge(true);
+        }
+    }, 60000); 
+    return () => clearInterval(interval);
+  }, [lastFetchTime, isLoading, refreshing]);
+
+  const handleSmartReload = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    setShowUpdateBadge(false);
+    // Trigger refresh after scrolling up
+    setTimeout(() => {
+        onRefresh();
+    }, 500);
   };
 
   useEffect(() => {
@@ -205,6 +231,33 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1 }}>
+        {showUpdateBadge && (
+            <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={handleSmartReload}
+                style={{ 
+                    position: 'absolute', 
+                    top: 60, 
+                    alignSelf: 'center', 
+                    zIndex: 999, 
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 30,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4.65,
+                    elevation: 8,
+                }}
+            >
+                <Ionicons name="reload-circle" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>New Feed Available</Text>
+            </TouchableOpacity>
+        )}
         <ScrollView 
           ref={scrollViewRef}
       style={[styles.container, { backgroundColor: theme.background }]}
@@ -214,6 +267,14 @@ export default function HomeScreen() {
         }
       }}
       scrollEventThrottle={400}
+      refreshControl={
+        <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]} 
+            tintColor={theme.primary}
+        />
+      }
     >
       {/* <WebStories /> */}
       
