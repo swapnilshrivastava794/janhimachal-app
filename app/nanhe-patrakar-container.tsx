@@ -128,7 +128,7 @@ export default function NanhePatrakarContainer() {
   
   // Debug Log
   React.useEffect(() => {
-    console.log('🔍 NanhePatrakarContainer: Current user_type is:', user?.user_type);
+    // console.log('🔍 NanhePatrakarContainer: Current user_type is:', user?.user_type);
   }, [user?.user_type]);
 
   // Portfolio only shows if the user is explicitly a 'nanhe_patrakar'

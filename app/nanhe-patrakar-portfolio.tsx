@@ -171,7 +171,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         setStats(statsRes.data.data);
                     }
                 } catch (statsErr) {
-                    console.log("Stats API not fully ready yet, using defaults");
+                    // console.log("Stats API not fully ready yet, using defaults");
                 }
 
                 // Check Certificate Status
@@ -184,7 +184,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         });
                     }
                 } catch (certErr) {
-                    console.log("Certificate check API error:", certErr);
+                    // console.log("Certificate check API error:", certErr);
                 }
             }
         } catch (error) {
@@ -218,7 +218,7 @@ export default function NanhePatrakarPortfolioScreen() {
         };
 
         RazorpayCheckout.open(options).then(async (data: any) => {
-            console.log(`Payment Success: ${data.razorpay_payment_id}`);
+            // console.log(`Payment Success: ${data.razorpay_payment_id}`);
             try {
                 const verifyPayload = {
                     razorpay_order_id: data.razorpay_order_id,
@@ -258,7 +258,7 @@ export default function NanhePatrakarPortfolioScreen() {
     const handlePayment = async () => {
         setIsLoading(true);
         try {
-            console.log("🚀 Starting Direct Payment from Portfolio...");
+            // console.log("🚀 Starting Direct Payment from Portfolio...");
             const orderResponse = await createRazorpayOrder();
             if (orderResponse.data && orderResponse.data.status) {
                 const orderData = orderResponse.data.data || orderResponse.data;

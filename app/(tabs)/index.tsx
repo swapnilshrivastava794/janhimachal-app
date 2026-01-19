@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -42,6 +42,10 @@ export default function HomeScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const topStoriesYPosition = useRef(0);
   const initialCategoryRef = useRef<number | null>(null);
+  
+  // AppState tracking for background/foreground detection
+  const appState = useRef(AppState.currentState);
+  const backgroundTimestamp = useRef<number>(Date.now());
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
@@ -49,11 +53,49 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        console.log('🏠 Home Screen Focused - Refreshing Profile...');
+        // console.log('🏠 Home Screen Focused - Refreshing Profile...');
         refreshProfile();
       }
     }, [user])
   );
+
+  // AppState listener: Detect when app comes back from background
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      // App is coming back to foreground
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        const timeInBackground = Date.now() - backgroundTimestamp.current;
+        const minutesInBackground = timeInBackground / (1000 * 60);
+        
+        // console.log(`📱 App returned to foreground after ${minutesInBackground.toFixed(1)} minutes`);
+        
+        // If app was in background for more than 5 minutes, show update badge
+        if (minutesInBackground >= 5) {
+          setShowUpdateBadge(true);
+          setToastMessage('नई खबरें उपलब्ध हैं!');
+          setToastVisible(true);
+        } 
+        // If 2-5 minutes, silently refresh in background
+        else if (minutesInBackground >= 2) {
+          // console.log('🔄 Silently refreshing feed...');
+          fetchData(false); // Refresh without skeleton loader
+        }
+      }
+      
+      // App is going to background - save timestamp
+      if (nextAppState.match(/inactive|background/)) {
+        backgroundTimestamp.current = Date.now();
+      }
+      
+      appState.current = nextAppState as any;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();

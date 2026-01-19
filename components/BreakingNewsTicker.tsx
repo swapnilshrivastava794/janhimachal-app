@@ -24,7 +24,7 @@ export function BreakingNewsTicker() {
 
   const fetchBreakingNews = async () => {
     try {
-      console.log('Fetching breaking news...');
+      // console.log('Fetching breaking news...');
       // headlines=1 matches query param logic 'headlines' == '1' from user request description 
       // but user *request* text said: "param me headlines true jayega"
       // Looking at the python code provided: if self.request.GET.get('headlines') == '1':
@@ -36,7 +36,7 @@ export function BreakingNewsTicker() {
       // console.log('Breaking news response:', JSON.stringify(res, null, 2));
       
       const newsItems = res.results || res || [];
-      console.log('News items found:', newsItems.length);
+      // console.log('News items found:', newsItems.length);
       
        if (Array.isArray(newsItems) && newsItems.length > 0) {
           setBreakingNewsItems(newsItems);
@@ -44,7 +44,7 @@ export function BreakingNewsTicker() {
           setBreakingNewsItems([{ id: 'default', post_title: DEFAULT_NEWS }]);
        }
      } catch (e) {
-       console.log("Error fetching breaking news:", e);
+      //  console.log("Error fetching breaking news:", e);
        setBreakingNewsItems([{ id: 'default', post_title: "Error loading news" }]);
      }
    };
@@ -96,7 +96,7 @@ export function BreakingNewsTicker() {
                  <TouchableOpacity 
                     key={index} 
                     onPressIn={() => {
-                        console.log("Ticker Clicked (In):", item.id);
+                        // console.log("Ticker Clicked (In):", item.id);
                         if (item.id && item.id !== 'default') {
                             router.push({ pathname: '/post/[id]', params: { id: item.id } });
                         }

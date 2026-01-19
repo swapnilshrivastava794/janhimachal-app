@@ -54,7 +54,7 @@ export default function SearchScreen() {
           const res = await searchNews(searchText, { page: 1, limit: 10 });
           setResults(res.results || res || []);
       } catch (error) {
-          console.log("Search error:", error);
+        //   console.log("Search error:", error);
       } finally {
           setIsLoading(false);
       }

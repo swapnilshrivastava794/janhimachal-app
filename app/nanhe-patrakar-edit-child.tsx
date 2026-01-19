@@ -65,7 +65,7 @@ export default function EditChildProfileScreen() {
                 setDistricts(res.data.data.results);
             }
         } catch (err) {
-            console.log("Error fetching districts");
+            // console.log("Error fetching districts");
         }
     };
 

@@ -97,7 +97,7 @@ export default function NanhePatrakarRegistrationScreen() {
   const fetchDistricts = async () => {
     try {
       const response = await getDistricts();
-      console.log('🏘️ Districts Response:', JSON.stringify(response.data, null, 2));
+    //   console.log('🏘️ Districts Response:', JSON.stringify(response.data, null, 2));
       
       // Robust Extraction
       if (response.data && response.data.status && response.data.data && response.data.data.results) {
@@ -185,7 +185,7 @@ export default function NanhePatrakarRegistrationScreen() {
         Alert.alert("Error", "Payment initialization failed due to invalid order data.");
         return;
     }
-    console.log('Initiating Payment with order:', rzpOrderId);
+    // console.log('Initiating Payment with order:', rzpOrderId);
     const options = {
       description: 'Nanhe Patrakar Registration',
       image: 'https://janhimachal.com/static/img/logo.png', 
@@ -204,7 +204,7 @@ export default function NanhePatrakarRegistrationScreen() {
 
     RazorpayCheckout.open(options).then(async (data: any) => {
       // handle success
-      console.log(`Payment Success: ${data.razorpay_payment_id}`);
+    //   console.log(`Payment Success: ${data.razorpay_payment_id}`);
       
       try {
           // Call Backend Verify API
@@ -215,7 +215,7 @@ export default function NanhePatrakarRegistrationScreen() {
           };
           
           const verifyRes = await verifyRazorpayPayment(verifyPayload);
-          console.log('✅ Verify Response:', JSON.stringify(verifyRes.data, null, 2));
+        //   console.log('✅ Verify Response:', JSON.stringify(verifyRes.data, null, 2));
 
           if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
               Alert.alert('Payment Successful', 'आपका पंजीकरण और भुगतान सफल रहा!');
@@ -248,9 +248,9 @@ export default function NanhePatrakarRegistrationScreen() {
   const handlePaymentOnly = async () => {
     setIsSubmitting(true); 
     try {
-        console.log("🚀 Starting Direct Payment Flow (Retry Mode)...");
+        // console.log("🚀 Starting Direct Payment Flow (Retry Mode)...");
         const orderResponse = await createRazorpayOrder();
-        console.log('📦 Razorpay Order (Retry):', JSON.stringify(orderResponse.data, null, 2));
+        // console.log('📦 Razorpay Order (Retry):', JSON.stringify(orderResponse.data, null, 2));
 
         if (orderResponse.data && orderResponse.data.status) {
              const orderData = orderResponse.data.data || orderResponse.data;
@@ -341,7 +341,7 @@ export default function NanhePatrakarRegistrationScreen() {
         }
 
         const enrollRes = await enrollNanhePatrakar(payload);
-        console.log('📝 Enrollment Response:', JSON.stringify(enrollRes.data, null, 2));
+        // console.log('📝 Enrollment Response:', JSON.stringify(enrollRes.data, null, 2));
 
         if (enrollRes.data && enrollRes.data.status === true) {
             // Enrollment Success - Refresh profile immediately
@@ -351,7 +351,7 @@ export default function NanhePatrakarRegistrationScreen() {
         } else {
             // Handle "User already enrolled" specifically
             if (enrollRes.data?.message === "User already enrolled" || enrollRes.data?.message?.includes("already")) {
-                console.log("ℹ️ User was already enrolled. Marking state as enrolled and retrying payment.");
+                // console.log("ℹ️ User was already enrolled. Marking state as enrolled and retrying payment.");
                 setIsEnrolled(true);
                 await handlePaymentOnly(); // Proceed to payment
             } else {

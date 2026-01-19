@@ -101,9 +101,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            console.log("🚀 Login API Request:");
-            console.log("🔗 URL:", `${constant.appBaseUrl}/api/nanhe-patrakar/login/`);
-            console.log("📦 Payload:", { username: email, password: password });
+            // console.log("🚀 Login API Request:");
+            // console.log("🔗 URL:", `${constant.appBaseUrl}/api/nanhe-patrakar/login/`);
+            // console.log("📦 Payload:", { username: email, password: password });
 
             const formData = new FormData();
             formData.append('username', email); // Using email as username
@@ -139,6 +139,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     await AsyncStorage.setItem('refreshToken', refresh);
                 }
                 setUser(userWithStats);
+                
+                // Immediately fetch parent profile after login to avoid loading state on profile page
+                if (user_type === 'nanhe_patrakar') {
+                    try {
+                        const { getParentProfile } = require('../api/server');
+                        const profileResponse = await getParentProfile();
+                        if (profileResponse.data && profileResponse.data.status && profileResponse.data.data.parent_profile) {
+                            setParentProfile(profileResponse.data.data.parent_profile);
+                        }
+                    } catch (profileError) {
+                        console.log('ℹ️ Could not fetch parent profile on login:', profileError);
+                    }
+                }
             } else {
                 throw new Error(response.data.message || 'Login failed');
             }
