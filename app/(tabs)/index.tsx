@@ -2,6 +2,7 @@ import { getNews, getSubmissions } from '@/api/server';
 import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
+import { ToastNotification } from '@/components/ToastNotification';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -12,14 +13,14 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedSubcategoryId, selectedCategoryName } = useCategory();
+  const { selectedSubcategoryId, selectedCategoryName, nextSubCategory, getNextCategoryInfo, categories } = useCategory();
   const { user, parentProfile, refreshProfile } = useAuth();
   
   const [topStories, setTopStories] = useState<any[]>([]);
@@ -30,11 +31,21 @@ export default function HomeScreen() {
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showLongLoading, setShowLongLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
+  const [showUpdateBadge, setShowUpdateBadge] = useState(false);
   
   // ScrollView ref for auto-scrolling when category changes
   const scrollViewRef = useRef<ScrollView>(null);
   const topStoriesYPosition = useRef(0);
   const initialCategoryRef = useRef<number | null>(null);
+  
+  // AppState tracking for background/foreground detection
+  const appState = useRef(AppState.currentState);
+  const backgroundTimestamp = useRef<number>(Date.now());
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
@@ -42,11 +53,49 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        console.log('🏠 Home Screen Focused - Refreshing Profile...');
+        // console.log('🏠 Home Screen Focused - Refreshing Profile...');
         refreshProfile();
       }
     }, [user])
   );
+
+  // AppState listener: Detect when app comes back from background
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      // App is coming back to foreground
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        const timeInBackground = Date.now() - backgroundTimestamp.current;
+        const minutesInBackground = timeInBackground / (1000 * 60);
+        
+        // console.log(`📱 App returned to foreground after ${minutesInBackground.toFixed(1)} minutes`);
+        
+        // If app was in background for more than 5 minutes, show update badge
+        if (minutesInBackground >= 5) {
+          setShowUpdateBadge(true);
+          setToastMessage('नई खबरें उपलब्ध हैं!');
+          setToastVisible(true);
+        } 
+        // If 2-5 minutes, silently refresh in background
+        else if (minutesInBackground >= 2) {
+          // console.log('🔄 Silently refreshing feed...');
+          fetchData(false); // Refresh without skeleton loader
+        }
+      }
+      
+      // App is going to background - save timestamp
+      if (nextAppState.match(/inactive|background/)) {
+        backgroundTimestamp.current = Date.now();
+      }
+      
+      appState.current = nextAppState as any;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -62,12 +111,33 @@ export default function HomeScreen() {
           scrollViewRef.current?.scrollTo({ y: topStoriesYPosition.current - 10, animated: true });
         }, 300);
       }
+      
+      // Reset long loading state when category changes
+      setShowLongLoading(false);
+
+      // Show Toast Notification
+
+      // Show Toast Notification
+      let subName = '';
+      if (categories) {
+          for (const cat of categories) {
+             const sub = cat.sub_categories?.find((s: any) => s.id === selectedSubcategoryId);
+             if (sub) {
+                 subName = sub.subcat_name;
+                 break;
+             }
+          }
+      }
+      if (subName) {
+          setToastMessage(`Now reading: ${subName}`);
+          setToastVisible(true);
+      }
     }
   }, [selectedSubcategoryId]); // Refetch when subcategory changes
 
-  const fetchData = async () => {
+  const fetchData = async (useSkeleton = true) => {
     if (!selectedSubcategoryId) return;
-    setIsLoading(true);
+    if (useSkeleton) setIsLoading(true);
     try {
       // Helper to fetch with fallback to 'latest' if empty
       const fetchSectionData = async (primaryParams: any, fallbackLimit: number = 5) => {
@@ -93,51 +163,47 @@ export default function HomeScreen() {
           }
       };
 
-      const topRes = await getNews({ subcategory_id: selectedSubcategoryId, limit: 10 });
-      setTopStories(topRes.results || topRes || []);
-
-      const recentData = await fetchSectionData(
+      // Execute all requests in parallel
+      const [
+        topRes,
+        recentData,
+        trendingData,
+        popularData,
+        articlesSectionData,
+        breakingRes,
+        nanheRes
+      ] = await Promise.all([
+        getNews({ subcategory_id: selectedSubcategoryId, limit: 10 }),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, latest: '1', headlines: '1', limit: 5 }, 
           5
-      );
-      setRecentPosts(recentData);
-
-      const trendingData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, trending: '1', limit: 5 },
           5
-      );
-      setTopPicks(trendingData);
-
-      const popularData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, headlines: '1', trending: '1', limit: 5 },
           5
-      );
-      setPopularNews(popularData);
-
-      const articlesSectionData = await fetchSectionData(
+        ),
+        fetchSectionData(
           { subcategory_id: selectedSubcategoryId, articles: '1', trending: '1', latest: '1', limit: 10 },
           10
-      );
-      setArticlesData(articlesSectionData);
-
-      const [latestMixRes, trendingMixRes] = await Promise.all([
-          getNews({ subcategory_id: selectedSubcategoryId, latest: '1', limit: 4 }),
-          getNews({ subcategory_id: selectedSubcategoryId, trending: '1', limit: 4 })
+        ),
+        getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 }),
+        getSubmissions({ status: 'Approved', limit: 5 })
       ]);
-      
-      const latestItems = latestMixRes.results || latestMixRes || [];
-      const trendingItems = trendingMixRes.results || trendingMixRes || [];
-      
-      const mixedMap = new Map();
-      [...latestItems, ...trendingItems].forEach(item => {
-          mixedMap.set(item.id, item);
-      });
-      const mixedNews = Array.from(mixedMap.values());
-      const breakingRes = await getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 });
+
+      setTopStories(topRes.results || topRes || []);
+      setRecentPosts(recentData);
+      setTopPicks(trendingData);
+      setPopularNews(popularData);
+      setArticlesData(articlesSectionData);
       setBreakingSectionNews(breakingRes.results || breakingRes || []);
       
-      // Fetch Nanhe Patrakar Spotlight Stories
-      const nanheRes = await getSubmissions({ status: 'Approved', limit: 5 });
+      setLastFetchTime(Date.now());
+      setShowUpdateBadge(false);
+
       if (nanheRes.data && nanheRes.data.status) {
           setNanhePatrakarStories(nanheRes.data.data.results || []);
       }
@@ -145,9 +211,49 @@ export default function HomeScreen() {
     } catch (e) {
       console.log('Error fetching home data:', e);
     } finally {
-      setIsLoading(false);
+      if (useSkeleton) setIsLoading(false);
+      setShowLongLoading(false);
     }
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchData(false);
+    setRefreshing(false);
+  }, [fetchData]);
+
+  // Smart Reload Logic: Check every minute if data is stale (> 5 mins)
+  useEffect(() => {
+    const interval = setInterval(() => {
+        const timeSinceLastFetch = Date.now() - lastFetchTime;
+        // 5 minutes threshold (300000 ms)
+        if (timeSinceLastFetch > 300000 && !isLoading && !refreshing) {
+            setShowUpdateBadge(true);
+        }
+    }, 60000); 
+    return () => clearInterval(interval);
+  }, [lastFetchTime, isLoading, refreshing]);
+
+  const handleSmartReload = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    setShowUpdateBadge(false);
+    // Trigger refresh after scrolling up
+    setTimeout(() => {
+        onRefresh();
+    }, 500);
+  };
+
+  useEffect(() => {
+    let timer: any;
+    if (isLoading) {
+        timer = setTimeout(() => {
+            setShowLongLoading(true);
+        }, 2000); // Show "Please Wait" if loading takes > 2s
+    } else {
+        setShowLongLoading(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   const handleViewAll = (title: string, type: string) => {
     router.push({ pathname: '/post' as any, params: { title, type } });
@@ -160,11 +266,59 @@ export default function HomeScreen() {
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
+  const isCloseToBottom = ({layoutMeasurement, contentOffset, contentSize}: any) => {
+    const paddingToBottom = 50; // Trigger slightly before exact bottom
+    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+  };
+
   return (
-    <ScrollView 
-      ref={scrollViewRef}
+    <View style={{ flex: 1 }}>
+        {showUpdateBadge && (
+            <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={handleSmartReload}
+                style={{ 
+                    position: 'absolute', 
+                    top: 60, 
+                    alignSelf: 'center', 
+                    zIndex: 999, 
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 30,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4.65,
+                    elevation: 8,
+                }}
+            >
+                <Ionicons name="reload-circle" size={18} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>New Feed Available</Text>
+            </TouchableOpacity>
+        )}
+        <ScrollView 
+          ref={scrollViewRef}
       style={[styles.container, { backgroundColor: theme.background }]}
+      onMomentumScrollEnd={({nativeEvent}) => {
+        if (isCloseToBottom(nativeEvent)) {
+            nextSubCategory();
+        }
+      }}
+      scrollEventThrottle={400}
+      refreshControl={
+        <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]} 
+            tintColor={theme.primary}
+        />
+      }
     >
+      {/* <WebStories /> */}
       
       {/* Cinematic Nanhe Patrakar Dash Banner */}
       <TouchableOpacity 
@@ -215,7 +369,7 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Impact Stats Section */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
+      {/* <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
           <View style={{ alignItems: 'center' }}>
               <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>5,000+</Text>
               <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>सक्रिय पत्रकार</Text>
@@ -230,7 +384,7 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>50+</Text>
               <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>ज़िले कवर</Text>
           </View>
-      </View>
+      </View> */}
 
       {/* Nanhe Patrakar Spotlight Section */}
       {nanhePatrakarStories.length > 0 && (
@@ -293,9 +447,8 @@ export default function HomeScreen() {
         {selectedCategoryName && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
+              <Text style={{ color: colorScheme === 'dark' ? '#000' : '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
             </View>
-            <Text style={{ color: theme.placeholderText, fontSize: 11 }}>की खबरें</Text>
           </View>
         )}
         <SectionHeader 
@@ -346,7 +499,7 @@ export default function HomeScreen() {
 
       {/* 2. Recent Post Section */}
       <View style={styles.sectionContainer}>
-        <SectionHeader title="Recent Post" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
+        <SectionHeader title="Recent News" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
         <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
             {isLoading ? (
                 [1, 2].map(i => <NewsSkeleton key={i} />)
@@ -474,6 +627,21 @@ export default function HomeScreen() {
       </View>
 
     </ScrollView>
+    
+    {/* Long Loading Indicator */}
+    {showLongLoading && isLoading && (
+        <View style={{ position: 'absolute', bottom: 80, alignSelf: 'center', backgroundColor: theme.card, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 3.84, elevation: 5 }}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>Taking longer than usual... Please wait</Text>
+        </View>
+    )}
+
+    <ToastNotification 
+        message={toastMessage} 
+        isVisible={toastVisible} 
+        onHide={() => setToastVisible(false)} 
+    />
+    </View>
   );
 }
 

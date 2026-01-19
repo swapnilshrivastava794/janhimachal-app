@@ -106,8 +106,8 @@ export default function NanhePatrakarScreen() {
                         activeOpacity={0.8}
                         onPress={() => router.push('/nanhe-patrakar-registration' as any)} 
                       > 
-                         <Text style={styles.mainButtonText}>रजिस्ट्रेशन के लिए आगे बढ़ें</Text>
-                         <Ionicons name="arrow-forward" size={20} color="#fff" />
+                         <Text style={[styles.mainButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>रजिस्ट्रेशन के लिए आगे बढ़ें</Text>
+                         <Ionicons name="arrow-forward" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                       </TouchableOpacity>
                   )}
               </View>
@@ -144,21 +144,21 @@ export default function NanhePatrakarScreen() {
               {/* Fee and Benefits Card */}
               <View style={[styles.premiumFeeCard, { backgroundColor: theme.primary }]}>
                   <View style={styles.feeHeaderRow}>
-                      <Text style={styles.feeLabel}>सहभागिता शुल्क</Text>
-                      <Text style={styles.feeValue}>₹599</Text>
+                      <Text style={[styles.feeLabel, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>सहभागिता शुल्क</Text>
+                      <Text style={[styles.feeValue, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹599</Text>
                   </View>
-                  <View style={styles.feeDivider} />
+                  <View style={[styles.feeDivider, { backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }]} />
                   <View style={styles.benefitRow}>
-                      <Ionicons name="checkmark-done-circle" size={18} color="#fff" />
-                      <Text style={styles.benefitText}>संपादकीय समीक्षा और सुधार</Text>
-                  </View>
-                  <View style={styles.benefitRow}>
-                      <Ionicons name="checkmark-done-circle" size={18} color="#fff" />
-                      <Text style={styles.benefitText}>App पर आधिकारिक प्रकाशन अवसर</Text>
+                      <Ionicons name="checkmark-done-circle" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                      <Text style={[styles.benefitText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>संपादकीय समीक्षा और सुधार</Text>
                   </View>
                   <View style={styles.benefitRow}>
-                      <Ionicons name="checkmark-done-circle" size={18} color="#fff" />
-                      <Text style={styles.benefitText}>दक्षता प्रमाण-पत्र (Certificate)</Text>
+                      <Ionicons name="checkmark-done-circle" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                      <Text style={[styles.benefitText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>App पर आधिकारिक प्रकाशन अवसर</Text>
+                  </View>
+                  <View style={styles.benefitRow}>
+                      <Ionicons name="checkmark-done-circle" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                      <Text style={[styles.benefitText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>दक्षता प्रमाण-पत्र (Certificate)</Text>
                   </View>
               </View>
 

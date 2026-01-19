@@ -45,7 +45,7 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     // IF 401 Unauthorized AND NOT already retried
-    const isLoginRequest = originalRequest.url && originalRequest.url.includes("api/auth/login");
+    const isLoginRequest = originalRequest.url && (originalRequest.url.includes("api/nanhe-patrakar/login/") || originalRequest.url.includes("api/auth/login/"));
     
     if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       originalRequest._retry = true;
@@ -73,14 +73,14 @@ axiosInstance.interceptors.response.use(
         }
       } catch (refreshError) {
         // Refresh failed -> Logout
-        console.log("❌ REFRESH FAILED:", refreshError?.response?.data || refreshError.message);
-        console.log("Session expired, logging out...");
+        // console.log("❌ REFRESH FAILED:", refreshError?.response?.data || refreshError.message);
+        // console.log("Session expired, logging out...");
         await logoutUser();
         return Promise.reject(refreshError);
       }
     }
 
-    console.log("🔥 AXIOS ERROR:", JSON.stringify(error, null, 2));
+    // console.log("🔥 AXIOS ERROR:", JSON.stringify(error, null, 2));
 
     if (error.response) {
       return Promise.reject(error.response.data);

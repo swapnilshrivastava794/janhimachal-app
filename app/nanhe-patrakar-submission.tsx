@@ -219,8 +219,8 @@ export default function NanhePatrakarSubmissionScreen() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: type === 'images' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-            allowsEditing: type === 'images', 
-            quality: 0.7, // Initial quality before manipulation
+            allowsEditing: false,
+            quality: 0.7,
             videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
         });
 
@@ -248,7 +248,7 @@ export default function NanhePatrakarSubmissionScreen() {
 
         const result = await ImagePicker.launchCameraAsync({
             mediaTypes: type === 'images' ? ImagePicker.MediaTypeOptions.Images : ImagePicker.MediaTypeOptions.Videos,
-            allowsEditing: type === 'images',
+            allowsEditing: false,
             quality: 0.7,
             videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
         });
@@ -345,7 +345,7 @@ export default function NanhePatrakarSubmissionScreen() {
                 <View style={styles.authPromptWrapper}>
                     <Text style={[styles.authTitle, { color: theme.text }]}>लॉगिन आवश्यक है</Text>
                     <TouchableOpacity style={[styles.authLoginBtn, { backgroundColor: theme.primary }]} onPress={() => router.push('/auth/login' as any)}>
-                        <Text style={styles.authLoginBtnText}>लॉगिन करें</Text>
+                        <Text style={[styles.authLoginBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>लॉगिन करें</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -473,8 +473,8 @@ export default function NanhePatrakarSubmissionScreen() {
                                 router.push('/nanhe-patrakar-portfolio' as any);
                             }}
                         >
-                            <Text style={styles.payBtnText}>पोर्टफोलियो और भुगतान पर जाएं</Text>
-                            <Ionicons name="arrow-forward" size={18} color="#fff" />
+                            <Text style={[styles.payBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>पोर्टफोलियो और भुगतान पर जाएं</Text>
+                            <Ionicons name="arrow-forward" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                         </TouchableOpacity>
 
                         <TouchableOpacity 

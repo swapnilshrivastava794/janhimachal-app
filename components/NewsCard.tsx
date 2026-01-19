@@ -53,9 +53,7 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
       <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
       
       {/* Category Overlay Pill */}
-      <View style={[styles.categoryPill, { backgroundColor: theme.tint }]}>
-          <Text style={styles.categoryText}>{category || 'News'}</Text>
-      </View>
+      
 
       {/* Share Button Overlay */}
       <TouchableOpacity 

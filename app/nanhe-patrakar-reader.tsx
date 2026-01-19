@@ -175,7 +175,7 @@ export default function NanhePatrakarReaderScreen() {
                 url: articleData.published_url || `${constant.appBaseUrl}/np/${articleData.id}`
             });
         } catch (error) {
-            console.log(error);
+            // console.log(error);
         }
     };
 
