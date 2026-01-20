@@ -13,7 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Dimensions, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionManager, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -38,9 +38,16 @@ export default function HomeScreen() {
   const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
   const [showUpdateBadge, setShowUpdateBadge] = useState(false);
   
+  // Top Stories Pagination
+  const [topStoriesPage, setTopStoriesPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreTopStories, setHasMoreTopStories] = useState(true);
+  const MAX_TOP_STORIES_PAGE = 5;
+  
   // ScrollView ref for auto-scrolling when category changes
   const scrollViewRef = useRef<ScrollView>(null);
   const topStoriesYPosition = useRef(0);
+  const topStoriesHeight = useRef(0);
   const initialCategoryRef = useRef<number | null>(null);
   
   // AppState tracking for background/foreground detection
@@ -187,8 +194,8 @@ export default function HomeScreen() {
           5
         ),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, articles: '1', trending: '1', latest: '1', limit: 10 },
-          10
+          { subcategory_id: selectedSubcategoryId, articles: '1' , limit: 10 },
+          
         ),
         getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 }),
         getSubmissions({ status: 'Approved', limit: 5 })
@@ -200,6 +207,10 @@ export default function HomeScreen() {
       setPopularNews(popularData);
       setArticlesData(articlesSectionData);
       setBreakingSectionNews(breakingRes.results || breakingRes || []);
+      
+      // Reset pagination for Top Stories
+      setTopStoriesPage(1);
+      setHasMoreTopStories(true);
       
       setLastFetchTime(Date.now());
       setShowUpdateBadge(false);
@@ -216,8 +227,52 @@ export default function HomeScreen() {
     }
   };
 
+  // Load more Top Stories (pagination)
+  const loadMoreTopStories = async () => {
+    if (isLoadingMore || !hasMoreTopStories || topStoriesPage >= MAX_TOP_STORIES_PAGE) {
+      if (topStoriesPage >= MAX_TOP_STORIES_PAGE) {
+        setHasMoreTopStories(false);
+      }
+      return;
+    }
+    
+    setIsLoadingMore(true);
+    try {
+      const nextPage = topStoriesPage + 1;
+      const res = await getNews({ 
+        subcategory_id: selectedSubcategoryId, 
+        limit: 10, 
+        page: nextPage 
+      });
+      
+      const newItems = res.results || res || [];
+      
+      if (newItems.length > 0) {
+        // Use InteractionManager to prevent frame drops during state update
+        InteractionManager.runAfterInteractions(() => {
+          setTopStories(prev => [...prev, ...newItems]);
+          setTopStoriesPage(nextPage);
+          
+          // Check if we've reached max page
+          if (nextPage >= MAX_TOP_STORIES_PAGE) {
+            setHasMoreTopStories(false);
+          }
+          setIsLoadingMore(false);
+        });
+      } else {
+        setHasMoreTopStories(false);
+        setIsLoadingMore(false);
+      }
+    } catch (e) {
+      console.log('Error loading more top stories:', e);
+      setIsLoadingMore(false);
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setTopStoriesPage(1);
+    setHasMoreTopStories(true);
     await fetchData(false);
     setRefreshing(false);
   }, [fetchData]);
@@ -303,8 +358,22 @@ export default function HomeScreen() {
         <ScrollView 
           ref={scrollViewRef}
       style={[styles.container, { backgroundColor: theme.background }]}
+      onScroll={({nativeEvent}) => {
+        const { contentOffset, layoutMeasurement } = nativeEvent;
+        const currentScrollY = contentOffset.y;
+        const screenHeight = layoutMeasurement.height;
+        
+        // Calculate when user is near the end of Top Stories section
+        const topStoriesEnd = topStoriesYPosition.current + topStoriesHeight.current;
+        const triggerPoint = topStoriesEnd - screenHeight - 200; // Trigger 200px before end
+        
+        // Auto-load more Top Stories when user scrolls near the end
+        if (currentScrollY > triggerPoint && hasMoreTopStories && !isLoadingMore && !isLoading) {
+          loadMoreTopStories();
+        }
+      }}
       onMomentumScrollEnd={({nativeEvent}) => {
-        if (isCloseToBottom(nativeEvent)) {
+        if (isCloseToBottom(nativeEvent) && !hasMoreTopStories) {
             nextSubCategory();
         }
       }}
@@ -441,6 +510,7 @@ export default function HomeScreen() {
         style={styles.sectionContainer}
         onLayout={(event) => {
           topStoriesYPosition.current = event.nativeEvent.layout.y;
+          topStoriesHeight.current = event.nativeEvent.layout.height;
         }}
       >
         {/* Category Indicator */}
@@ -455,44 +525,59 @@ export default function HomeScreen() {
             title={`Top Stories and Breaking News in ${selectedCategoryName || 'UAE News'}`} 
             onViewAll={() => handleViewAll('Top Stories', 'top_stories')} 
         />
-        <View style={{ minHeight: 200, justifyContent: 'center' }}>
+        <View style={{ paddingHorizontal: 16 }}>
             {isLoading ? (
-                 <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.sliderContent}
-                 >
-                    {[1, 2, 3].map((i) => (
-                        <View key={i} style={{ width: width * 0.85, marginHorizontal: 8 }}>
-                            <NewsSkeleton width="100%" />
-                        </View>
-                    ))}
-                 </ScrollView>
+                [1, 2, 3].map(i => <NewsSkeleton key={i} />)
             ) : (
-             <View>
-                <ScrollView 
-                horizontal 
-                decelerationRate="fast"
-                snapToInterval={width * 0.85 + 16} // Window width + margins
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.sliderContent}
-                >
-                {topStories.map((item) => (
-                    <View key={item.id} style={{ width: width * 0.85, marginHorizontal: 8 }}>
-                    <NewsCard
-                        title={item.post_title || item.title}
-                        image={item.image}
-                        category={item.category || "News"}
-                        author={item.posted_by || item.author || "Unknown"}
-                        date={item.post_date || item.date}
-                        shareUrl={item.share_url}
-                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                        width="100%"
-                    />
-                    </View>
-                ))}
-                </ScrollView>
-            </View>
+                <FlatList
+                    data={topStories}
+                    keyExtractor={(item, index) => `${item.id}-${index}`}
+                    renderItem={({ item }) => (
+                        <NewsCard
+                            title={item.post_title || item.title}
+                            image={item.image}
+                            category={item.category || "News"}
+                            author={item.posted_by || item.author || "Unknown"}
+                            date={item.post_date || item.date}
+                            shareUrl={item.share_url}
+                            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                        />
+                    )}
+                    onEndReached={() => {
+                        if (hasMoreTopStories && !isLoadingMore) {
+                            loadMoreTopStories();
+                        }
+                    }}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={() => (
+                        <View>
+                            {hasMoreTopStories && (
+                                <View style={{ paddingVertical: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+                                    {isLoadingMore ? (
+                                        <>
+                                            <ActivityIndicator size="small" color={theme.primary} />
+                                            <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>Loading more news...</Text>
+                                        </>
+                                    ) : (
+                                        <Text style={{ color: theme.placeholderText, fontSize: 12 }}>↓ Scroll for more news ({topStoriesPage}/{MAX_TOP_STORIES_PAGE})</Text>
+                                    )}
+                                </View>
+                            )}
+                            {!hasMoreTopStories && topStoriesPage >= MAX_TOP_STORIES_PAGE && (
+                                <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+                                    <Text style={{ color: theme.placeholderText, fontSize: 12, fontWeight: '600' }}>✓ All Top Stories loaded</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={true}
+                    initialNumToRender={5}
+                    maxToRenderPerBatch={5}
+                    windowSize={5}
+                    removeClippedSubviews={true}
+                    ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+                />
             )}
         </View>
       </View>
