@@ -175,11 +175,11 @@ export default function HomeScreen() {
       ] = await Promise.all([
         getNews({ subcategory_id: selectedSubcategoryId, limit: 10 }),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, latest: '1', headlines: '1', limit: 5 }, 
+          { subcategory_id: selectedSubcategoryId, latest: '1', limit: 5,page:2 }, 
           5
         ),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, trending: '1', limit: 5 },
+          { subcategory_id: selectedSubcategoryId, trending: '1',latest: '1', limit: 5, page:1 },
           5
         ),
         fetchSectionData(

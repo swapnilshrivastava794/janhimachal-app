@@ -150,15 +150,17 @@ export default function PostIndexScreen() {
 
      // Standard News Card for everything else
      return (
-        <NewsCard
-            title={item.post_title || item.title}
-            image={item.image}
-            category={item.category || 'News'}
-            author={item.posted_by || item.author}
-            date={item.post_date || item.date}
-            shareUrl={item.share_url}
-            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-        />
+        <View style={{ paddingHorizontal: 16 }}>
+          <NewsCard
+              title={item.post_title || item.title}
+              image={item.image}
+              category={item.category || 'News'}
+              author={item.posted_by || item.author}
+              date={item.post_date || item.date}
+              shareUrl={item.share_url}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+          />
+        </View>
      );
   }, [isBreaking, type, theme, router]);
 
