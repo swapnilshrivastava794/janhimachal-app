@@ -24,50 +24,83 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
   const theme = Colors[colorScheme ?? 'light'];
 
   const imageUrl = image && image.startsWith('http') ? image : `${constant.appBaseUrl}/wp-content/uploads/2023/04/jan-himachal-logo.png`;
-  const displayDate = date ? new Date(date).toLocaleDateString() : '';
+
+  const now = new Date();
+  const past = new Date(date);
+  const diffInMs = now.getTime() - past.getTime();
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+
+  const getTimeAgo = () => {
+    const diffInMins = Math.floor(diffInMs / (1000 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMins < 1) return `अभी-अभी`;
+    if (diffInMins < 60) return `${diffInMins} मिनट पहले`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'घंटा' : 'घंटे'} पहले`;
+    if (diffInDays < 7) return `${diffInDays} दिन पहले`;
+    return past.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const isNew = diffInHours < 24;
+  const displayAuthor = author || "Jan Himachal";
 
   const handleShare = async () => {
-      try {
-          // Use share_url from API directly, fallback to constructed URL
-          const url = shareUrl || `${constant.appBaseUrl}/${type}/${id}`;
-          
-          await Share.share({
-              message: `${title}\n\nRead more: ${url}`,
-              url: url,
-              title: title
-          });
-      } catch (error: any) {
-          console.log(error.message);
-      }
+    try {
+      // Use share_url from API directly, fallback to constructed URL
+      const url = shareUrl || `${constant.appBaseUrl}/${type}/${id}`;
+
+      await Share.share({
+        message: `${title}\n\nRead more: ${url}`,
+        url: url,
+        title: title
+      });
+    } catch (error: any) {
+      console.log(error.message);
+    }
   };
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[
-          styles.card, 
-          { backgroundColor: theme.background, borderColor: theme.borderColor, width: width || '100%' }
-      ]} 
+        styles.card,
+        { backgroundColor: theme.background, borderColor: theme.borderColor, width: width || '100%' }
+      ]}
       onPress={onPress}
       activeOpacity={0.9}
     >
       <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
-      
-      {/* Category Overlay Pill */}
-      
 
       {/* Share Button Overlay */}
-      <TouchableOpacity 
-          style={styles.shareBtn} 
-          onPress={handleShare}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      <TouchableOpacity
+        style={styles.shareBtn}
+        onPress={handleShare}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-          <Ionicons name="share-social" size={20} color="#fff" />
+        <Ionicons name="share-social" size={20} color="#fff" />
       </TouchableOpacity>
 
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.text }]} numberOfLines={3}>{title}</Text>
         <View style={styles.metaContainer}>
-          <Text style={[styles.metaText, { color: theme.icon }]}>{"Jan Himachal"} • {displayDate || date}</Text>
+          {isNew ? (
+            <>
+              <View style={[styles.categoryBadge, { backgroundColor: theme.primary }]}>
+                <Text style={styles.categoryBadgeText}>{category?.toUpperCase() || 'NEWS'}</Text>
+              </View>
+              <Text style={[styles.metaText, { color: theme.icon, marginLeft: 8 }]}>
+                {getTimeAgo()}
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={[styles.categoryBadge, { backgroundColor: theme.icon + '20' }]}>
+                <Text style={[styles.categoryBadgeText, { color: theme.icon }]}>{category?.toUpperCase() || 'NEWS'}</Text>
+              </View>
+              <Text style={[styles.metaText, { color: theme.icon, marginLeft: 8 }]}>
+                {getTimeAgo()} • {displayAuthor}
+              </Text>
+            </>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -77,16 +110,16 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
 const styles = StyleSheet.create({
   // ... existing styles ...
   shareBtn: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
   // ... existing styles ...
   card: {
@@ -143,5 +176,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
 });

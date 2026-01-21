@@ -172,12 +172,12 @@ export default function ArticleDetailScreen() {
 
         {/* Article Meta Row */}
         <View style={styles.metaRow}>
-          <View style={styles.authorSection}>
+          <View style={[styles.authorSection, { flex: 1 }]}>
             <View style={styles.authorAvatar}>
               <Text style={styles.authorInitials}>{(article.posted_by || article.author || 'D')[0]?.toUpperCase()}</Text>
             </View>
-            <View>
-              <Text style={[styles.authorName, { color: theme.text }]}>
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={1} style={[styles.authorName, { color: theme.text }]}>
                 {((article.posted_by || article.author || 'Jan Himachal') as string).charAt(0).toUpperCase() + ((article.posted_by || article.author || 'Jan Himachal') as string).slice(1)}
               </Text>
               <Text style={[styles.date, { color: theme.tabIconDefault }]}>{formatDate(article.video_date || article.post_date || article.date)}</Text>
@@ -188,28 +188,25 @@ export default function ArticleDetailScreen() {
           <View style={styles.socialRow}>
             {/* WhatsApp */}
             <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#25D366' }]} onPress={shareToWhatsApp}>
-              <FontAwesome name="whatsapp" size={16} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Copy Link */}
-            <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#6c757d' }]} onPress={copyLink}>
-              <FontAwesome name="link" size={16} color="#fff" />
-            </TouchableOpacity>
-
-            {/* Telegram */}
-            <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#0088cc' }]} onPress={shareToTelegram}>
-              <FontAwesome name="telegram" size={16} color="#fff" />
+              <FontAwesome name="whatsapp" size={18} color="#fff" />
             </TouchableOpacity>
 
             {/* Facebook */}
             <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#1877F2' }]} onPress={shareToFacebook}>
-              <FontAwesome name="facebook" size={16} color="#fff" />
+              <FontAwesome name="facebook" size={18} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Telegram */}
+            <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#0088cc' }]} onPress={shareToTelegram}>
+              <FontAwesome name="telegram" size={18} color="#fff" />
+            </TouchableOpacity>
+
+            {/* Copy Link */}
+            <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#6c757d' }]} onPress={copyLink}>
+              <FontAwesome name="link" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
-
-
-
 
         {/* Hero Media (YouTube or Image) */}
         {videoId ? (
@@ -259,7 +256,6 @@ export default function ArticleDetailScreen() {
             {article.video_short_des || article.post_short_des || article.description || "No description available."}
           </Text>
 
-          {/* Render Post Description (HTML stripped) */}
           {/* Render Post/Video Description (Rich HTML) */}
           {(article.video_des || article.post_des) && (
             <View style={{ marginBottom: 20 }}>
@@ -310,8 +306,6 @@ export default function ArticleDetailScreen() {
 
         <View style={[styles.divider, { backgroundColor: theme.borderColor }]} />
 
-        {/* Related News (Limit 10 + View All) */}
-        {/* Related News (Limit 10 + View All) */}
         {/* Related News (Horizontal Explorer) */}
         <View style={styles.relatedSection}>
           <View style={styles.relatedHeaderRow}>

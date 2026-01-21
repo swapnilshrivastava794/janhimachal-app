@@ -154,8 +154,9 @@ export default function HomeScreen() {
         jobsRes,
         specialRes
       ] = await Promise.all([
-        (async () => { 
-          console.log('Top Stories Params:', { ...baseParams, limit: 10 }); return getNews({ ...baseParams, limit: 10 }); })(), // Standard feed (matches default API)
+        (async () => {
+          console.log('Top Stories Params:', { ...baseParams, limit: 10 }); return getNews({ ...baseParams, limit: 10 });
+        })(), // Standard feed (matches default API)
         fetchSectionData(
           { ...baseParams, latest: '1', limit: 10 }, // Removed page: 2, increased limit
           5
@@ -315,9 +316,9 @@ export default function HomeScreen() {
           marginBottom: 16,
           borderRadius: 20,
           overflow: 'hidden',
-          backgroundColor: '#fff',
+          backgroundColor: '#ffffffff',
           elevation: 10,
-          shadowColor: '#E31E24',
+          shadowColor: '#0a0707ff',
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.4,
           shadowRadius: 12
@@ -325,7 +326,7 @@ export default function HomeScreen() {
       >
         <Image
           source={require('@/assets/nanhe-patarkar.jpg')}
-          style={{ width: '100%', height: 350 }}
+          style={{ width: '90%', height: 300 }}
           resizeMode="contain"
         />
         {/* Subtle tag overlay to indicate it's active */}
@@ -386,7 +387,7 @@ export default function HomeScreen() {
 
       {/* 1. Breaking News Section (Horizontal) */}
       <View style={styles.sectionContainer}>
-        <SectionHeader title="ताज़ा ख़बरें" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
+        <SectionHeader title="ताज़ा खबरें" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
         <FlatList
           horizontal
           data={breakingSectionNews}
@@ -398,7 +399,7 @@ export default function HomeScreen() {
             <NewsCard
               title={item.post_title || item.title}
               image={item.image}
-              category="BREAKING"
+              category={item.category || item.subcategory || "BREAKING"}
               author={item.posted_by || item.author}
               date={item.post_date || item.date}
               shareUrl={item.share_url}
@@ -423,7 +424,7 @@ export default function HomeScreen() {
             <NewsCard
               title={item.post_title || item.title}
               image={item.image}
-              category="Top Pick"
+              category={item.category || item.subcategory || "Top Pick"}
               author={item.posted_by || item.author}
               date={item.post_date || item.date}
               shareUrl={item.share_url}
@@ -487,7 +488,7 @@ export default function HomeScreen() {
             <NewsCard
               title={item.post_title || item.title}
               image={item.image}
-              category="Popular"
+              category={item.category || item.subcategory || "Popular"}
               author={item.posted_by || item.author}
               date={item.post_date || item.date}
               shareUrl={item.share_url}
@@ -500,7 +501,7 @@ export default function HomeScreen() {
 
       {/* 5. Recent News (Horizontal) */}
       <View style={styles.sectionContainer}>
-        <SectionHeader title="ताज़ा अपडेट" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
+        <SectionHeader title="ताज़ा खबरें" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
         <FlatList
           horizontal
           data={recentPosts}
@@ -512,7 +513,7 @@ export default function HomeScreen() {
             <NewsCard
               title={item.post_title || item.title}
               image={item.image}
-              category="Recent"
+              category={item.category || item.subcategory || "Recent"}
               author={item.posted_by || item.author}
               date={item.post_date || item.date}
               shareUrl={item.share_url}
@@ -538,7 +539,7 @@ export default function HomeScreen() {
               <NewsCard
                 title={item.post_title || item.title}
                 image={item.image}
-                category="Article"
+                category={item.category || item.subcategory || "Article"}
                 author={item.posted_by || item.author}
                 date={item.post_date || item.date}
                 shareUrl={item.share_url}
@@ -565,7 +566,7 @@ export default function HomeScreen() {
               <NewsCard
                 title={item.post_title || item.title}
                 image={item.image}
-                category="नौकरी"
+                category={item.category || item.subcategory || "नौकरी"}
                 author={item.posted_by || item.author}
                 date={item.post_date || item.date}
                 shareUrl={item.share_url}
@@ -592,7 +593,7 @@ export default function HomeScreen() {
               <NewsCard
                 title={item.post_title || item.title}
                 image={item.image}
-                category="विशेष"
+                category={item.category || item.subcategory || "विशेष"}
                 author={item.posted_by || item.author}
                 date={item.post_date || item.date}
                 shareUrl={item.share_url}

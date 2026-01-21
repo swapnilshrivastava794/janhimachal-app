@@ -73,10 +73,8 @@ export default function PostIndexScreen() {
           params.latest = '1';
           break;
         case 'breaking':
-          // For View All Breaking, we prioritize Latest since "Mixed" is hard to paginate.
-          // Or we can use HeadLines.
-          // Let's use Latest for infinite scroll consistency.
-          params.latest = '1';
+          // Use the correct 'breaking' parameter to match the home screen section
+          params.breaking = '1';
           break;
         case 'top_stories':
         default:
@@ -195,13 +193,17 @@ export default function PostIndexScreen() {
 
     if (isBreaking) {
       return (
-        <View style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+          style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}
+        >
           <View style={styles.breakingIconRow}>
             <View style={styles.breakingDot} />
             <Text style={[styles.breakingMeta, { color: theme.accent }]}>BREAKING NOW</Text>
           </View>
           <Text style={[styles.breakingTitle, { color: theme.text }]}>{item.post_title || item.title}</Text>
-        </View>
+        </TouchableOpacity>
       );
     }
 

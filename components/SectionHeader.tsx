@@ -12,16 +12,20 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, onViewAll }: SectionHeaderProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+  const isDark = colorScheme === 'dark';
 
   return (
     <View style={styles.container}>
-      <View style={[styles.titleContainer, { borderLeftColor: theme.primary }]}>
-        <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+      <View style={[styles.titleContainer, { borderLeftColor: theme.primary, flex: 1 }]}>
+        <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>{title}</Text>
       </View>
       {onViewAll && (
-        <TouchableOpacity onPress={onViewAll} style={styles.viewAllBtn}>
-          <Text style={[styles.viewAllText, { color: theme.primary }]}>View All</Text>
-          <Ionicons name="chevron-forward" size={14} color={theme.primary} />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={onViewAll}
+          style={[styles.viewAllIconBtn, { backgroundColor: isDark ? '#222' : '#f5f5f5' }]}
+        >
+          <Ionicons name="arrow-forward" size={16} color={isDark ? '#fff' : '#000'} />
         </TouchableOpacity>
       )}
     </View>
@@ -33,26 +37,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
     marginTop: 20,
-    gap: 8, // Space between title and button
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   titleContainer: {
     borderLeftWidth: 4,
     paddingLeft: 8,
   },
   title: {
-    fontSize: 16, // Reduced from 18
+    fontSize: 16,
     fontWeight: 'bold',
     lineHeight: 22,
   },
-  viewAllBtn: {
-    flexDirection: 'row',
+  viewAllIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'flex-end', // Move to right
-    marginTop: 4,
-    gap: 4,
-  },
-  viewAllText: {
-    fontSize: 12,
-    fontWeight: '600',
+    // Subtle shadow for premium feel
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
