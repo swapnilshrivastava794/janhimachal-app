@@ -1,4 +1,4 @@
-import { getNews, getSubmissions } from '@/api/server';
+import { getNews, getSubmissions, getVideos } from '@/api/server';
 import { NewsCard } from '@/components/NewsCard';
 import { NewsSkeleton } from '@/components/NewsSkeleton';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -13,16 +13,17 @@ import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionManager, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionManager, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedSubcategoryId, selectedCategoryName, nextSubCategory, getNextCategoryInfo, categories } = useCategory();
+  const { selectedSubcategoryId, selectedCategoryName, nextSubCategory, categories } = useCategory();
   const { user, parentProfile, refreshProfile } = useAuth();
-  
+
   const [topStories, setTopStories] = useState<any[]>([]);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [topPicks, setTopPicks] = useState<any[]>([]);
@@ -30,6 +31,8 @@ export default function HomeScreen() {
   const [articlesData, setArticlesData] = useState<any[]>([]);
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
+  const [videosData, setVideosData] = useState<any[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -37,30 +40,27 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(Date.now());
   const [showUpdateBadge, setShowUpdateBadge] = useState(false);
-  
+
   // Top Stories Pagination
   const [topStoriesPage, setTopStoriesPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreTopStories, setHasMoreTopStories] = useState(true);
   const MAX_TOP_STORIES_PAGE = 5;
-  
-  // ScrollView ref for auto-scrolling when category changes
-  const scrollViewRef = useRef<ScrollView>(null);
-  const topStoriesYPosition = useRef(0);
-  const topStoriesHeight = useRef(0);
+
+  // FlatList ref
+  const flatListRef = useRef<FlatList>(null);
   const initialCategoryRef = useRef<number | null>(null);
-  
+
   // AppState tracking for background/foreground detection
   const appState = useRef(AppState.currentState);
   const backgroundTimestamp = useRef<number>(Date.now());
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
-  // Refresh profile data EVERY TIME Home screen comes into focus (not just mount)
+  // Refresh profile data EVERY TIME Home screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        // console.log('🏠 Home Screen Focused - Refreshing Profile...');
         refreshProfile();
       }
     }, [user])
@@ -69,106 +69,107 @@ export default function HomeScreen() {
   // AppState listener: Detect when app comes back from background
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
-      // App is coming back to foreground
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         const timeInBackground = Date.now() - backgroundTimestamp.current;
         const minutesInBackground = timeInBackground / (1000 * 60);
-        
-        // console.log(`📱 App returned to foreground after ${minutesInBackground.toFixed(1)} minutes`);
-        
-        // If app was in background for more than 5 minutes, show update badge
+
         if (minutesInBackground >= 5) {
           setShowUpdateBadge(true);
           setToastMessage('नई खबरें उपलब्ध हैं!');
           setToastVisible(true);
-        } 
-        // If 2-5 minutes, silently refresh in background
-        else if (minutesInBackground >= 2) {
-          // console.log('🔄 Silently refreshing feed...');
-          fetchData(false); // Refresh without skeleton loader
+        } else if (minutesInBackground >= 2) {
+          fetchData(false);
         }
       }
-      
-      // App is going to background - save timestamp
+
       if (nextAppState.match(/inactive|background/)) {
         backgroundTimestamp.current = Date.now();
       }
-      
+
       appState.current = nextAppState as any;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, []);
 
   useEffect(() => {
     fetchData();
-    
-    // Track if this is default view or user changed category
+
     if (initialCategoryRef.current === null && selectedSubcategoryId) {
-      // First load - save the initial category
       initialCategoryRef.current = selectedSubcategoryId;
     } else if (initialCategoryRef.current !== null && selectedSubcategoryId !== initialCategoryRef.current) {
-      // User changed category - auto scroll to news section
-      if (scrollViewRef.current && topStoriesYPosition.current > 0) {
+      if (flatListRef.current) {
+        // Scroll to top of list when category changes
         setTimeout(() => {
-          scrollViewRef.current?.scrollTo({ y: topStoriesYPosition.current - 10, animated: true });
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
         }, 300);
       }
-      
-      // Reset long loading state when category changes
+
       setShowLongLoading(false);
 
-      // Show Toast Notification
-
-      // Show Toast Notification
       let subName = '';
       if (categories) {
-          for (const cat of categories) {
-             const sub = cat.sub_categories?.find((s: any) => s.id === selectedSubcategoryId);
-             if (sub) {
-                 subName = sub.subcat_name;
-                 break;
-             }
+        for (const cat of categories) {
+          const sub = cat.sub_categories?.find((s: any) => s.id === selectedSubcategoryId);
+          if (sub) {
+            subName = sub.subcat_name;
+            break;
           }
+        }
       }
       if (subName) {
-          setToastMessage(`Now reading: ${subName}`);
-          setToastVisible(true);
+        setToastMessage(`Now reading: ${subName}`);
+        setToastVisible(true);
       }
     }
-  }, [selectedSubcategoryId]); // Refetch when subcategory changes
+  }, [selectedSubcategoryId]);
 
   const fetchData = async (useSkeleton = true) => {
-    if (!selectedSubcategoryId) return;
     if (useSkeleton) setIsLoading(true);
     try {
       // Helper to fetch with fallback to 'latest' if empty
       const fetchSectionData = async (primaryParams: any, fallbackLimit: number = 5) => {
-          try {
-              const res = await getNews(primaryParams);
-              const data = res.results || res || [];
-              if (data.length > 0) return data;
-              
-              const fallbackRes = await getNews({ 
-                  subcategory_id: selectedSubcategoryId, 
-                  latest: '1', 
-                  limit: fallbackLimit 
-              });
-              return fallbackRes.results || fallbackRes || [];
-          } catch (e) {
-              console.log("Section fetch error, trying fallback", e);
-              const fallbackRes = await getNews({ 
-                  subcategory_id: selectedSubcategoryId, 
-                  latest: '1', 
-                  limit: fallbackLimit 
-              });
-              return fallbackRes.results || fallbackRes || [];
+        try {
+          // If no subcategory, remove it from params
+          if (!selectedSubcategoryId) {
+            delete primaryParams.subcategory_id;
           }
+
+          const res = await getNews(primaryParams);
+          const data = res.results || res || [];
+          if (data.length > 0) return data;
+
+          // Fallback logic also needs to respect no-category
+          const fallbackParams: any = {
+            latest: '1',
+            limit: fallbackLimit
+          };
+          if (selectedSubcategoryId) {
+            fallbackParams.subcategory_id = selectedSubcategoryId;
+          }
+
+          const fallbackRes = await getNews(fallbackParams);
+          return fallbackRes.results || fallbackRes || [];
+        } catch (e) {
+          console.log("Section fetch error, trying fallback", e);
+          const fallbackParams: any = {
+            latest: '1',
+            limit: fallbackLimit
+          };
+          if (selectedSubcategoryId) {
+            fallbackParams.subcategory_id = selectedSubcategoryId;
+          }
+          const fallbackRes = await getNews(fallbackParams);
+          return fallbackRes.results || fallbackRes || [];
+        }
       };
+
+      // Base params for main queries
+      const baseParams: any = {};
+      if (selectedSubcategoryId) {
+        baseParams.subcategory_id = selectedSubcategoryId;
+      }
 
       // Execute all requests in parallel
       const [
@@ -178,27 +179,28 @@ export default function HomeScreen() {
         popularData,
         articlesSectionData,
         breakingRes,
-        nanheRes
+        nanheRes,
+        videoRes
       ] = await Promise.all([
-        getNews({ subcategory_id: selectedSubcategoryId, limit: 10 }),
+        getNews({ ...baseParams, limit: 10 }),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, latest: '1', limit: 5,page:2 }, 
+          { ...baseParams, latest: '1', limit: 5, page: 2 },
           5
         ),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, trending: '1',latest: '1', limit: 5, page:1 },
+          { ...baseParams, trending: '1', latest: '1', limit: 5, page: 1 },
           5
         ),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, headlines: '1', trending: '1', limit: 5 },
+          { ...baseParams, headlines: '1', trending: '1', limit: 5 },
           5
         ),
         fetchSectionData(
-          { subcategory_id: selectedSubcategoryId, articles: '1' , limit: 10 },
-          
+          { ...baseParams, articles: '1', limit: 10 },
         ),
-        getNews({ subcategory_id: selectedSubcategoryId, breaking: '1', limit: 5 }),
-        getSubmissions({ status: 'Approved', limit: 5 })
+        getNews({ ...baseParams, breaking: '1', limit: 5 }),
+        getSubmissions({ status: 'Approved', limit: 5 }),
+        getVideos({ ...baseParams, limit: 5 })
       ]);
 
       setTopStories(topRes.results || topRes || []);
@@ -207,16 +209,16 @@ export default function HomeScreen() {
       setPopularNews(popularData);
       setArticlesData(articlesSectionData);
       setBreakingSectionNews(breakingRes.results || breakingRes || []);
-      
-      // Reset pagination for Top Stories
+      setVideosData(videoRes.results || videoRes || []);
+
       setTopStoriesPage(1);
       setHasMoreTopStories(true);
-      
+
       setLastFetchTime(Date.now());
       setShowUpdateBadge(false);
 
       if (nanheRes.data && nanheRes.data.status) {
-          setNanhePatrakarStories(nanheRes.data.data.results || []);
+        setNanhePatrakarStories(nanheRes.data.data.results || []);
       }
 
     } catch (e) {
@@ -227,7 +229,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Load more Top Stories (pagination)
   const loadMoreTopStories = async () => {
     if (isLoadingMore || !hasMoreTopStories || topStoriesPage >= MAX_TOP_STORIES_PAGE) {
       if (topStoriesPage >= MAX_TOP_STORIES_PAGE) {
@@ -235,25 +236,27 @@ export default function HomeScreen() {
       }
       return;
     }
-    
+
     setIsLoadingMore(true);
     try {
       const nextPage = topStoriesPage + 1;
-      const res = await getNews({ 
-        subcategory_id: selectedSubcategoryId, 
-        limit: 10, 
-        page: nextPage 
-      });
-      
+      const params: any = {
+        limit: 10,
+        page: nextPage
+      };
+      if (selectedSubcategoryId) {
+        params.subcategory_id = selectedSubcategoryId;
+      }
+
+      const res = await getNews(params);
+
       const newItems = res.results || res || [];
-      
+
       if (newItems.length > 0) {
-        // Use InteractionManager to prevent frame drops during state update
         InteractionManager.runAfterInteractions(() => {
           setTopStories(prev => [...prev, ...newItems]);
           setTopStoriesPage(nextPage);
-          
-          // Check if we've reached max page
+
           if (nextPage >= MAX_TOP_STORIES_PAGE) {
             setHasMoreTopStories(false);
           }
@@ -277,35 +280,32 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [fetchData]);
 
-  // Smart Reload Logic: Check every minute if data is stale (> 5 mins)
   useEffect(() => {
     const interval = setInterval(() => {
-        const timeSinceLastFetch = Date.now() - lastFetchTime;
-        // 5 minutes threshold (300000 ms)
-        if (timeSinceLastFetch > 300000 && !isLoading && !refreshing) {
-            setShowUpdateBadge(true);
-        }
-    }, 60000); 
+      const timeSinceLastFetch = Date.now() - lastFetchTime;
+      if (timeSinceLastFetch > 300000 && !isLoading && !refreshing) {
+        setShowUpdateBadge(true);
+      }
+    }, 60000);
     return () => clearInterval(interval);
   }, [lastFetchTime, isLoading, refreshing]);
 
   const handleSmartReload = () => {
-    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
     setShowUpdateBadge(false);
-    // Trigger refresh after scrolling up
     setTimeout(() => {
-        onRefresh();
+      onRefresh();
     }, 500);
   };
 
   useEffect(() => {
     let timer: any;
     if (isLoading) {
-        timer = setTimeout(() => {
-            setShowLongLoading(true);
-        }, 2000); // Show "Please Wait" if loading takes > 2s
+      timer = setTimeout(() => {
+        setShowLongLoading(true);
+      }, 2000);
     } else {
-        setShowLongLoading(false);
+      setShowLongLoading(false);
     }
     return () => clearTimeout(timer);
   }, [isLoading]);
@@ -321,199 +321,271 @@ export default function HomeScreen() {
     return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const isCloseToBottom = ({layoutMeasurement, contentOffset, contentSize}: any) => {
-    const paddingToBottom = 50; // Trigger slightly before exact bottom
-    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-  };
-
-  return (
-    <View style={{ flex: 1 }}>
-        {showUpdateBadge && (
-            <TouchableOpacity 
-                activeOpacity={0.8}
-                onPress={handleSmartReload}
-                style={{ 
-                    position: 'absolute', 
-                    top: 60, 
-                    alignSelf: 'center', 
-                    zIndex: 999, 
-                    backgroundColor: theme.primary,
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 30,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4.65,
-                    elevation: 8,
-                }}
-            >
-                <Ionicons name="reload-circle" size={18} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>New Feed Available</Text>
-            </TouchableOpacity>
-        )}
-        <ScrollView 
-          ref={scrollViewRef}
-      style={[styles.container, { backgroundColor: theme.background }]}
-      onScroll={({nativeEvent}) => {
-        const { contentOffset, layoutMeasurement } = nativeEvent;
-        const currentScrollY = contentOffset.y;
-        const screenHeight = layoutMeasurement.height;
-        
-        // Calculate when user is near the end of Top Stories section
-        const topStoriesEnd = topStoriesYPosition.current + topStoriesHeight.current;
-        const triggerPoint = topStoriesEnd - screenHeight - 200; // Trigger 200px before end
-        
-        // Auto-load more Top Stories when user scrolls near the end
-        if (currentScrollY > triggerPoint && hasMoreTopStories && !isLoadingMore && !isLoading) {
-          loadMoreTopStories();
-        }
-      }}
-      onMomentumScrollEnd={({nativeEvent}) => {
-        if (isCloseToBottom(nativeEvent) && !hasMoreTopStories) {
-            nextSubCategory();
-        }
-      }}
-      scrollEventThrottle={400}
-      refreshControl={
-        <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[theme.primary]} 
-            tintColor={theme.primary}
-        />
-      }
-    >
-      {/* <WebStories /> */}
-      
-      {/* Cinematic Nanhe Patrakar Dash Banner */}
-      <TouchableOpacity 
+  const renderHeader = () => (
+    <View>
+      {/* Dashboard Banner */}
+      <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => {
-            if (!user) {
-                // Not logged in - go to login
-                router.push('/auth/login' as any);
-            } else if (parentProfile) {
-                // Has parent profile (enrolled) - go to portfolio (for payment or viewing)
-                router.push('/nanhe-patrakar-portfolio' as any);
-            } else {
-                // Logged in but no parent profile - go to registration
-                router.push('/nanhe-patrakar-registration' as any);
-            }
+          if (!user) {
+            router.push('/auth/login' as any);
+          } else if (parentProfile) {
+            router.push('/nanhe-patrakar-portfolio' as any);
+          } else {
+            router.push('/nanhe-patrakar-registration' as any);
+          }
         }}
-        style={{ margin: 16, marginBottom: 8, borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#E31E24', shadowOffset: {width:0, height:6}, shadowOpacity: 0.4, shadowRadius: 12 }}
+        style={{ margin: 16, marginBottom: 8, borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#E31E24', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 }}
       >
         <LinearGradient
-            colors={isNanhePatrakar ? ['#1e3c72', '#2a5298'] : ['#E31E24', '#8E0E00']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ padding: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          colors={isNanhePatrakar ? ['#1e3c72', '#2a5298'] : ['#E31E24', '#8E0E00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ padding: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         >
-            <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 }}>
-                        <Text style={{ color: '#000', fontSize: 11, fontWeight: '900' }}>
-                            {isNanhePatrakar ? 'MY DASHBOARD' : 'VOICE OF HIMACHAL'}
-                        </Text>
-                    </View>
-                </View>
-                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 }}>नन्हे पत्रकार</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginTop: 4 }}>
-                    {isNanhePatrakar 
-                        ? 'अपना पोर्टफोलियो और आईडी कार्ड देखें' 
-                        : 'क्या आपके बच्चे में है एक न्यूज़ रिपोर्टर?'}
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ color: '#000', fontSize: 11, fontWeight: '900' }}>
+                  {isNanhePatrakar ? 'MY DASHBOARD' : 'VOICE OF HIMACHAL'}
                 </Text>
+              </View>
             </View>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
-                <Ionicons 
-                    name={isNanhePatrakar ? "id-card" : "mic-outline"} 
-                    size={26} 
-                    color="#FFD700" 
-                />
-            </View>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 }}>नन्हे पत्रकार</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginTop: 4 }}>
+              {isNanhePatrakar
+                ? 'अपना पोर्टफोलियो और आईडी कार्ड देखें'
+                : 'क्या आपके बच्चे में है एक न्यूज़ रिपोर्टर?'}
+            </Text>
+          </View>
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
+            <Ionicons
+              name={isNanhePatrakar ? "id-card" : "mic-outline"}
+              size={26}
+              color="#FFD700"
+            />
+          </View>
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Impact Stats Section */}
-      {/* <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginHorizontal: 16, marginBottom: 20, backgroundColor: theme.card, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: theme.borderColor }}>
-          <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>5,000+</Text>
-              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>सक्रिय पत्रकार</Text>
-          </View>
-          <View style={{ width: 1, height: '80%', backgroundColor: theme.borderColor, alignSelf: 'center' }} />
-          <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>10,000+</Text>
-              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>खबरें प्रकाशित</Text>
-          </View>
-          <View style={{ width: 1, height: '80%', backgroundColor: theme.borderColor, alignSelf: 'center' }} />
-          <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary }}>50+</Text>
-              <Text style={{ fontSize: 9, color: theme.placeholderText, fontWeight: '700' }}>ज़िले कवर</Text>
-          </View>
-      </View> */}
-
-      {/* Nanhe Patrakar Spotlight Section */}
+      {/* Nanhe Patrakar Stories */}
       {nanhePatrakarStories.length > 0 && (
-          <View style={[styles.sectionContainer, { marginBottom: 30 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 15 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={{ backgroundColor: theme.primary, width: 4, height: 20, borderRadius: 2 }} />
-                      <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>नन्हे पत्रकारों की कलम से</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => router.push('/nanhe-patrakar-hub' as any)}>
-                      <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 12 }}>View Hub</Text>
-                  </TouchableOpacity>
-              </View>
-
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 8 }}
-              >
-                  {nanhePatrakarStories.map((story) => {
-                      const storyImg = story.media_files?.[0]?.file ? (story.media_files[0].file.startsWith('http') ? story.media_files[0].file : `${constant.appBaseUrl}${story.media_files[0].file}`) : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=300';
-                      return (
-                          <TouchableOpacity 
-                            key={story.id}
-                            onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: story.id } } as any)}
-                            style={{ width: width * 0.7, marginHorizontal: 8, backgroundColor: theme.card, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: theme.borderColor }}
-                          >
-                              <View style={{ position: 'relative' }}>
-                                  <Image source={{ uri: storyImg }} style={{ width: '100%', height: 140 }} />
-                                  <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                      <Ionicons name="eye-outline" size={12} color="#fff" />
-                                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{story.views || 0}</Text>
-                                  </View>
-                              </View>
-                              <View style={{ padding: 12 }}>
-                                  <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '800', marginBottom: 4 }}>{story.topic_title_hindi?.toUpperCase() || 'TOPIC'}</Text>
-                                  <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800', marginBottom: 8 }} numberOfLines={2}>{story.title}</Text>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: 1, borderTopColor: theme.borderColor, paddingTop: 8 }}>
-                                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '20', alignItems: 'center', justifyContent: 'center' }}>
-                                          <Ionicons name="person" size={14} color={theme.primary} />
-                                      </View>
-                                      <Text style={{ color: theme.placeholderText, fontSize: 11, fontWeight: '700' }}>By {story.child_name || 'Nanha Patrakar'}</Text>
-                                  </View>
-                              </View>
-                          </TouchableOpacity>
-                      );
-                  })}
-              </ScrollView>
+        <View style={[styles.sectionContainer, { marginBottom: 30 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 15 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ backgroundColor: theme.primary, width: 4, height: 20, borderRadius: 2 }} />
+              <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>नन्हे पत्रकारों की कलम से</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/nanhe-patrakar-hub' as any)}>
+              <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 12 }}>View Hub</Text>
+            </TouchableOpacity>
           </View>
+
+          <FlatList
+            horizontal
+            data={nanhePatrakarStories}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 8 }}
+            renderItem={({ item: story }) => {
+              const storyImg = story.media_files?.[0]?.file ? (story.media_files[0].file.startsWith('http') ? story.media_files[0].file : `${constant.appBaseUrl}${story.media_files[0].file}`) : 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=300';
+              return (
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: story.id } } as any)}
+                  style={{ width: width * 0.7, marginHorizontal: 8, backgroundColor: theme.card, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: theme.borderColor }}
+                >
+                  <View style={{ position: 'relative' }}>
+                    <Image source={{ uri: storyImg }} style={{ width: '100%', height: 140 }} />
+                    <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="eye-outline" size={12} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{story.views || 0}</Text>
+                    </View>
+                  </View>
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '800', marginBottom: 4 }}>{story.topic_title_hindi?.toUpperCase() || 'TOPIC'}</Text>
+                    <Text style={{ color: theme.text, fontSize: 14, fontWeight: '800', marginBottom: 8 }} numberOfLines={2}>{story.title}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: 1, borderTopColor: theme.borderColor, paddingTop: 8 }}>
+                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: theme.primary + '20', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="person" size={14} color={theme.primary} />
+                      </View>
+                      <Text style={{ color: theme.placeholderText, fontSize: 11, fontWeight: '700' }}>By {story.child_name || 'Nanha Patrakar'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       )}
 
-      {/* 1. Top Stories Section */}
-      <View 
-        style={styles.sectionContainer}
-        onLayout={(event) => {
-          topStoriesYPosition.current = event.nativeEvent.layout.y;
-          topStoriesHeight.current = event.nativeEvent.layout.height;
-        }}
-      >
-        {/* Category Indicator */}
+      {/* 1. Breaking News Section (Horizontal) */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="ब्रेकिंग न्यूज़" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
+        <FlatList
+          horizontal
+          data={breakingSectionNews}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          renderItem={({ item }) => (
+            <NewsCard
+              title={item.post_title || item.title}
+              image={item.image}
+              category="BREAKING"
+              author={item.posted_by || item.author}
+              date={item.post_date || item.date}
+              shareUrl={item.share_url}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              width={280}
+            />
+          )}
+        />
+      </View>
+
+      {/* 2. Top Picks (Horizontal) */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="ट्रेंडिंग खबरें" onViewAll={() => handleViewAll('Top Picks', 'top_picks')} />
+        <FlatList
+          horizontal
+          data={topPicks}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          renderItem={({ item }) => (
+            <NewsCard
+              title={item.post_title || item.title}
+              image={item.image}
+              category="Top Pick"
+              author={item.posted_by || item.author}
+              date={item.post_date || item.date}
+              shareUrl={item.share_url}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              width={300}
+            />
+          )}
+        />
+      </View>
+
+      {/* 3. Videos (Horizontal) */}
+      {videosData.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <SectionHeader title="ताज़ा वीडियो" />
+          <FlatList
+            horizontal
+            data={videosData}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+            renderItem={({ item }) => {
+              const videoTitle = item.video_title || item.post_title || item.title;
+              let image = item.thumbnail || item.image;
+              const videoId = item.video_url;
+              if (videoId && (!image || image.includes('na.jpg'))) {
+                image = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+              }
+
+              return (
+                <TouchableOpacity
+                  style={{ width: 260, marginRight: 12 }}
+                  onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id, type: 'video' } })}
+                >
+                  <View style={{ height: 150, borderRadius: 12, overflow: 'hidden', marginBottom: 8, position: 'relative' }}>
+                    <Image source={{ uri: image }} style={{ width: '100%', height: '100%' }} />
+                    <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="play-circle" size={40} color="#fff" />
+                    </View>
+                  </View>
+                  <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }} numberOfLines={2}>{videoTitle}</Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      )}
+
+
+      {/* 4. Popular News (Horizontal) */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="लोकप्रिय खबरें" onViewAll={() => handleViewAll('Popular News', 'popular')} />
+        <FlatList
+          horizontal
+          data={popularNews}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          renderItem={({ item }) => (
+            <NewsCard
+              title={item.post_title || item.title}
+              image={item.image}
+              category="Popular"
+              author={item.posted_by || item.author}
+              date={item.post_date || item.date}
+              shareUrl={item.share_url}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              width={280}
+            />
+          )}
+        />
+      </View>
+
+      {/* 5. Recent News (Horizontal) */}
+      <View style={styles.sectionContainer}>
+        <SectionHeader title="ताज़ा अपडेट" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
+        <FlatList
+          horizontal
+          data={recentPosts}
+          keyExtractor={(item) => item.id.toString()}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+          ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+          renderItem={({ item }) => (
+            <NewsCard
+              title={item.post_title || item.title}
+              image={item.image}
+              category="Recent"
+              author={item.posted_by || item.author}
+              date={item.post_date || item.date}
+              shareUrl={item.share_url}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              width={280}
+            />
+          )}
+        />
+      </View>
+
+      {/* 6. Articles (Horizontal) */}
+      {articlesData.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <SectionHeader title="लेख और विश्लेषण" onViewAll={() => handleViewAll('Articles', 'articles')} />
+          <FlatList
+            horizontal
+            data={articlesData}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+            renderItem={({ item }) => (
+              <NewsCard
+                title={item.post_title || item.title}
+                image={item.image}
+                category="Article"
+                author={item.posted_by || item.author}
+                date={item.post_date || item.date}
+                shareUrl={item.share_url}
+                onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                width={300}
+              />
+            )}
+          />
+        </View>
+      )}
+
+      {/* 7. Top Stories Header (Start of Vertical Feed) */}
+      <View style={[styles.sectionContainer, { marginBottom: 0 }]}>
         {selectedCategoryName && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
             <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
@@ -521,211 +593,139 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-        <SectionHeader 
-            title={`Top Stories and Breaking News in ${selectedCategoryName || 'UAE News'}`} 
-            onViewAll={() => handleViewAll('Top Stories', 'top_stories')} 
+        <SectionHeader
+          title={`आज की बड़ी खबरें`}
+          onViewAll={() => handleViewAll('Top Stories', 'top_stories')}
         />
-        <View style={{ paddingHorizontal: 16 }}>
-            {isLoading ? (
-                [1, 2, 3].map(i => <NewsSkeleton key={i} />)
-            ) : (
-                <FlatList
-                    data={topStories}
-                    keyExtractor={(item, index) => `${item.id}-${index}`}
-                    renderItem={({ item }) => (
-                        <NewsCard
-                            title={item.post_title || item.title}
-                            image={item.image}
-                            category={item.category || "News"}
-                            author={item.posted_by || item.author || "Unknown"}
-                            date={item.post_date || item.date}
-                            shareUrl={item.share_url}
-                            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                        />
-                    )}
-                    onEndReached={() => {
-                        if (hasMoreTopStories && !isLoadingMore) {
-                            loadMoreTopStories();
-                        }
-                    }}
-                    onEndReachedThreshold={0.5}
-                    ListFooterComponent={() => (
-                        <View>
-                            {hasMoreTopStories && (
-                                <View style={{ paddingVertical: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
-                                    {isLoadingMore ? (
-                                        <>
-                                            <ActivityIndicator size="small" color={theme.primary} />
-                                            <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>Loading more news...</Text>
-                                        </>
-                                    ) : (
-                                        <Text style={{ color: theme.placeholderText, fontSize: 12 }}>↓ Scroll for more news ({topStoriesPage}/{MAX_TOP_STORIES_PAGE})</Text>
-                                    )}
-                                </View>
-                            )}
-                            {!hasMoreTopStories && topStoriesPage >= MAX_TOP_STORIES_PAGE && (
-                                <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-                                    <Text style={{ color: theme.placeholderText, fontSize: 12, fontWeight: '600' }}>✓ All Top Stories loaded</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
-                    scrollEnabled={false}
-                    nestedScrollEnabled={true}
-                    initialNumToRender={5}
-                    maxToRenderPerBatch={5}
-                    windowSize={5}
-                    removeClippedSubviews={true}
-                    ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-                />
-            )}
-        </View>
       </View>
+    </View>
+  );
 
-      {/* 2. Recent Post Section */}
-      <View style={styles.sectionContainer}>
-        <SectionHeader title="Recent News" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
-        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
-            {isLoading ? (
-                [1, 2].map(i => <NewsSkeleton key={i} />)
+  const renderFooter = () => (
+    <View>
+      {/* Top Stories Loading State */}
+      <View style={{ marginBottom: 30 }}>
+        {hasMoreTopStories && (
+          <View style={{ paddingVertical: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+            {isLoadingMore ? (
+              <>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <Text style={{ color: theme.text, fontWeight: '600', fontSize: 13 }}>Loading more news...</Text>
+              </>
             ) : (
-                <View>
-                    {recentPosts.map((item) => (
-                    <NewsCard
-                        key={item.id}
-                        title={item.post_title || item.title}
-                        image={item.image}
-                        category={item.category || "Recent"}
-                        author={item.posted_by || item.author || "Unknown"}
-                        date={item.post_date || item.date}
-                        shareUrl={item.share_url}
-                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                    />
-                    ))}
-                </View>
+              <Text style={{ color: theme.placeholderText, fontSize: 12 }}>↓ Scroll for more news ({topStoriesPage}/{MAX_TOP_STORIES_PAGE})</Text>
             )}
-        </View>
+          </View>
+        )}
+        {!hasMoreTopStories && topStoriesPage >= MAX_TOP_STORIES_PAGE && (
+          <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+            <Text style={{ color: theme.placeholderText, fontSize: 12, fontWeight: '600' }}>✓ All Top Stories loaded</Text>
+          </View>
+        )}
       </View>
+    </View>
+  );
 
-      {/* 3. Top Picks Section */}
-      <View style={styles.sectionContainer}>
-        <SectionHeader title="Top Picks" onViewAll={() => handleViewAll('Top Picks', 'top_picks')} />
-        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
-            {isLoading ? (
-                [1, 2].map(i => <NewsSkeleton key={i} />)
-            ) : (
-                <View>
-                    {topPicks.map((item) => (
-                    <NewsCard
-                        key={item.id}
-                        title={item.post_title || item.title}
-                        image={item.image}
-                        category="Top Pick" 
-                        author={item.posted_by || item.author || "Unknown"}
-                        date={item.post_date || item.date}
-                        shareUrl={item.share_url}
-                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                    />
-                    ))}
-                </View>
-            )}
-        </View>
-      </View>
-
-      {/* 4. Popular News Section */}
-      {(isLoading || popularNews.length > 0) && (
-      <View style={styles.sectionContainer}>
-        <SectionHeader title="Popular News" onViewAll={() => handleViewAll('Popular News', 'popular')} />
-        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
-            {isLoading ? (
-                [1, 2].map(i => <NewsSkeleton key={i} />)
-            ) : (
-                <View>
-                    {popularNews.map((item) => (
-                    <NewsCard
-                        key={item.id}
-                        title={item.post_title || item.title}
-                        image={item.image}
-                        category={item.category || "Popular"}
-                        author={item.posted_by || item.author || "Unknown"}
-                        date={item.post_date || item.date}
-                        shareUrl={item.share_url}
-                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                    />
-                    ))}
-                </View>
-            )}
-        </View>
-      </View>
+  return (
+    <View style={{ flex: 1 }}>
+      {showUpdateBadge && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleSmartReload}
+          style={{
+            position: 'absolute',
+            top: 60,
+            alignSelf: 'center',
+            zIndex: 999,
+            backgroundColor: theme.primary,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: 30,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4.65,
+            elevation: 8,
+          }}
+        >
+          <Ionicons name="reload-circle" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>New Feed Available</Text>
+        </TouchableOpacity>
       )}
 
-      {/* 5. Articles Section */}
-      <View style={styles.sectionContainer}>
-        <SectionHeader title="Articles" onViewAll={() => handleViewAll('Articles', 'articles')} />
-        <View style={{ minHeight: 100, justifyContent: 'center', paddingHorizontal: 16 }}>
-             {isLoading ? (
-                [1, 2, 3].map(i => <NewsSkeleton key={i} />)
-             ) : (
-                <View>
-                    {articlesData.map((item) => (
-                    <NewsCard
-                        key={item.id}
-                        title={item.post_title || item.title}
-                        image={item.image}
-                        category="Article"
-                        author={item.posted_by || item.author || "Unknown"}
-                        date={item.post_date || item.date}
-                        shareUrl={item.share_url}
-                        onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-                    />
-                    ))}
-                     {articlesData.length === 0 && (
-                        <View style={{ padding: 20, alignItems: 'center' }}>
-                            <Text style={{ color: theme.icon }}>No articles found.</Text>
-                        </View>
-                    )}
-                </View>
-             )}
+      {/* Main FlatList - Optimized for 120Hz */}
+      {isLoading && topStories.length === 0 ? (
+        // Initial Loading State
+        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: 60 }]}>
+          {[1, 2, 3].map(i => <NewsSkeleton key={i} />)}
         </View>
-      </View>
-
-      {/* 5. Breaking News Section */}
-      <View style={[styles.sectionContainer, { paddingBottom: 40 }]}>
-        <SectionHeader title="Breaking News" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
-        <View style={{ minHeight: 100, justifyContent: 'center' }}>
-            <View style={{ opacity: isLoading ? 0.4 : 1 }}>
-                {breakingSectionNews.map((item) => (
-                <TouchableOpacity key={item.id} onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}>
-                    <View style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}>
-                        <Text style={[styles.breakingTitle, { color: theme.text }]}>{item.post_title || item.title}</Text>
-                        <Text style={[styles.breakingMeta, { color: theme.accent }]}>BREAKING • {formatDate(item.post_date || item.date)}</Text>
-                    </View>
-                </TouchableOpacity>
-                ))}
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={topStories}
+          style={[styles.container, { backgroundColor: theme.background }]}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          renderItem={({ item }) => (
+            <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+              <NewsCard
+                title={item.post_title || item.title}
+                image={item.image}
+                category={item.category || "News"}
+                author={item.posted_by || item.author || "Unknown"}
+                date={item.post_date || item.date}
+                shareUrl={item.share_url}
+                onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              />
             </View>
-            {isLoading && (
-                <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', zIndex: 1 }]}>
-                    <ActivityIndicator size="small" color={theme.text} />
-                </View>
-            )}
-        </View>
-      </View>
+          )}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderFooter}
+          onEndReached={() => {
+            if (hasMoreTopStories && !isLoadingMore) {
+              loadMoreTopStories();
+            }
+          }}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+          removeClippedSubviews={true}
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          onMomentumScrollEnd={({ nativeEvent }) => {
+            const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }: any) => {
+              const paddingToBottom = 100;
+              return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+            };
+            if (isCloseToBottom(nativeEvent) && !hasMoreTopStories) {
+              nextSubCategory();
+            }
+          }}
+        />
+      )}
 
-    </ScrollView>
-    
-    {/* Long Loading Indicator */}
-    {showLongLoading && isLoading && (
-        <View style={{ position: 'absolute', bottom: 80, alignSelf: 'center', backgroundColor: theme.card, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: "#000", shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.2, shadowRadius: 3.84, elevation: 5 }}>
-            <ActivityIndicator size="small" color={theme.primary} />
-            <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>Taking longer than usual... Please wait</Text>
+      {/* Long Loading Indicator */}
+      {showLongLoading && isLoading && (
+        <View style={{ position: 'absolute', bottom: 80, alignSelf: 'center', backgroundColor: theme.card, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 3.84, elevation: 5 }}>
+          <ActivityIndicator size="small" color={theme.primary} />
+          <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>Taking longer than usual... Please wait</Text>
         </View>
-    )}
+      )}
 
-    <ToastNotification 
-        message={toastMessage} 
-        isVisible={toastVisible} 
-        onHide={() => setToastVisible(false)} 
-    />
+      <ToastNotification
+        message={toastMessage}
+        isVisible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 }
@@ -736,17 +736,6 @@ const styles = StyleSheet.create({
   },
   sectionContainer: {
     marginBottom: 20,
-  },
-  mainHeader: {
-    fontSize: 22,
-    fontWeight: '300',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    lineHeight: 30,
-  },
-  horizontalList: {
-    paddingHorizontal: 16,
   },
   breakingItem: {
     padding: 16,
@@ -761,12 +750,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
-  },
-  sliderContent: {
-    paddingHorizontal: 8,
-  },
-  sliderItem: {
-    width: width - 32, // Full width minus padding
-    marginHorizontal: 8,
   },
 });

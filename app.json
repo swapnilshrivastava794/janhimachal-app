@@ -47,6 +47,7 @@
           }
         }
       ],
+      "./plugins/withHighRefreshRate",
       [
         "expo-build-properties",
         {

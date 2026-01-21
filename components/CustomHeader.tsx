@@ -25,23 +25,23 @@ export function CustomHeader() {
   React.useEffect(() => {
     // Scroll subcategory into view
     if (subCategoryScrollRef.current && selectedSubcategoryId && categories.length > 0) {
-       const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
-       const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
-       if (index !== -1) {
-          // Estimate position (assuming ~100px width per item)
-          // For more precision, we'd use onLayout, but this is a rough "scroll to make visible"
-           subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
-       }
+      const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
+      const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
+      if (index !== -1) {
+        // Estimate position (assuming ~100px width per item)
+        // For more precision, we'd use onLayout, but this is a rough "scroll to make visible"
+        subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
+      }
     }
   }, [selectedSubcategoryId]);
 
   React.useEffect(() => {
     // Scroll main category into view
     if (categoryScrollRef.current && selectedCategoryName && categories.length > 0) {
-        const index = categories.findIndex(c => c.cat_name === selectedCategoryName);
-        if (index !== -1) {
-            categoryScrollRef.current.scrollTo({ x: index * 90, animated: true });
-        }
+      const index = categories.findIndex(c => c.cat_name === selectedCategoryName);
+      if (index !== -1) {
+        categoryScrollRef.current.scrollTo({ x: index * 90, animated: true });
+      }
     }
   }, [selectedCategoryName]);
 
@@ -55,39 +55,31 @@ export function CustomHeader() {
       const res = await getCategories();
       const data = res.data;
       setCategories(data);
-      if (data.length > 0 && !selectedCategoryName) {
-         // User Default: "UAE News" -> "Know UAE"
-         const defaultCat = data.find((c: any) => c.cat_name === "UAE News") || data[0];
-         setSelectedCategoryName(defaultCat.cat_name);
-         
-         // Find "Know UAE" in subcategories
-         if (defaultCat.sub_categories && defaultCat.sub_categories.length > 0) {
-             const defaultSub = defaultCat.sub_categories.find((s: any) => s.subcat_name === "Know UAE") || defaultCat.sub_categories[0];
-             setSelectedSubcategoryId(defaultSub.id);
-         }
-      }
+      setCategories(data);
+      // Removed auto-selection logic to allow "All News" default state
     } catch (error) {
       console.log('Error fetching categories:', error);
     }
   };
 
   const handleCategoryPress = (cat: any) => {
-    setSelectedCategoryName(cat.cat_name);
-    // Automatically select first subcategory or clear selection?
-    // User logic: "subcategory_id header select hogi"
-    // Usually selecting a main category might select "All" or first subcat.
-    // For now, if subcategories exist, maybe default to first one?
-    // The previous logic didn't enforce a subcat selection on category press.
-    // But since HomeScreen depends on subcategory_id, we should update it.
-    if (cat.sub_categories && cat.sub_categories.length > 0) {
-        setSelectedSubcategoryId(cat.sub_categories[0].id);
+    // Toggle: if same category clicked again, deselect everything
+    if (selectedCategoryName === cat.cat_name) {
+      setSelectedCategoryName(null as any);
+      setSelectedSubcategoryId(null as any);
     } else {
-        setSelectedSubcategoryId(null as any); // Or 0
+      setSelectedCategoryName(cat.cat_name);
+      // Only show subcategories, don't auto-select first one
     }
   };
 
   const handleSubcategoryPress = (subId: number) => {
+    // Toggle: if same subcategory clicked again, deselect it
+    if (selectedSubcategoryId === subId) {
+      setSelectedSubcategoryId(null as any);
+    } else {
       setSelectedSubcategoryId(subId);
+    }
   };
 
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -101,36 +93,36 @@ export function CustomHeader() {
       <SafeAreaView>
         <View style={styles.topBar}>
           <View style={[styles.leftRow, { flex: 1 }]}>
-             <WeatherWidget />
+            <WeatherWidget />
           </View>
-          
+
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('@/assets/logo.png')} 
-              style={styles.logoImage} 
+            <Image
+              source={require('@/assets/logo.png')}
+              style={styles.logoImage}
               resizeMode="contain"
             />
           </View>
 
           <View style={[styles.rightRow, { flex: 1, justifyContent: 'flex-end' }]}>
             <TouchableOpacity onPress={() => router.push('/search')}>
-                <Ionicons name="search" size={24} color={theme.text} style={styles.icon} />
+              <Ionicons name="search" size={24} color={theme.text} style={styles.icon} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Categories Tabs */}
         <View>
-          <ScrollView 
+          <ScrollView
             ref={categoryScrollRef}
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
+            horizontal
+            showsHorizontalScrollIndicator={false}
             style={[styles.categoriesContainer, { backgroundColor: theme.categoryBg }]}
             contentContainerStyle={styles.categoriesContent}
           >
             {categories.map((cat, index) => (
-              <TouchableOpacity 
-                key={index} 
+              <TouchableOpacity
+                key={index}
                 style={[styles.categoryItem, selectedCategoryName === cat.cat_name && { backgroundColor: 'rgba(255,255,255,0.2)' }]}
                 onPress={() => handleCategoryPress(cat)}
               >
@@ -141,24 +133,24 @@ export function CustomHeader() {
 
           {/* Subcategories */}
           {activeSubcategories.length > 0 && (
-            <ScrollView 
+            <ScrollView
               ref={subCategoryScrollRef}
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+              horizontal
+              showsHorizontalScrollIndicator={false}
               style={[styles.subcategoriesContainer, { backgroundColor: theme.subcategoryBg }]}
               contentContainerStyle={styles.subcategoriesContent}
             >
               {activeSubcategories.map((sub: any, index: number) => (
-                <TouchableOpacity 
-                    key={index} 
-                    style={[
-                        styles.subcategoryItem, 
-                        selectedSubcategoryId === sub.id && { 
-                            borderBottomWidth: 2, 
-                            borderBottomColor: theme.text 
-                        }
-                    ]}
-                    onPress={() => handleSubcategoryPress(sub.id)}
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.subcategoryItem,
+                    selectedSubcategoryId === sub.id && {
+                      borderBottomWidth: 2,
+                      borderBottomColor: theme.text
+                    }
+                  ]}
+                  onPress={() => handleSubcategoryPress(sub.id)}
                 >
                   <Text style={[styles.subcategoryText, { color: theme.subcategoryText }]}>{sub.subcat_name.toUpperCase()}</Text>
                 </TouchableOpacity>
@@ -168,8 +160,8 @@ export function CustomHeader() {
 
           {/* Breaking News Ticker */}
           <BreakingNewsTicker />
-          
-          
+
+
         </View>
       </SafeAreaView>
     </View>
