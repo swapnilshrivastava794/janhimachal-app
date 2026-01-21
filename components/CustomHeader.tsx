@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -11,10 +11,9 @@ import { useCategory } from '@/context/CategoryContext';
 import { BreakingNewsTicker } from '@/components/BreakingNewsTicker';
 import { WeatherWidget } from '@/components/WeatherWidget';
 
-// ... (Imports and CATEGORY_DATA remain same)
-
 export function CustomHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const { selectedCategoryName, setSelectedCategoryName, selectedSubcategoryId, setSelectedSubcategoryId, categories, setCategories } = useCategory();
@@ -28,8 +27,6 @@ export function CustomHeader() {
       const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
       const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
       if (index !== -1) {
-        // Estimate position (assuming ~100px width per item)
-        // For more precision, we'd use onLayout, but this is a rough "scroll to make visible"
         subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
       }
     }
@@ -55,36 +52,68 @@ export function CustomHeader() {
       const res = await getCategories();
       const data = res.data;
       setCategories(data);
-      setCategories(data);
-      // Removed auto-selection logic to allow "All News" default state
+
+      // Auto-select first category on startup so subcategories are always visible
+      if (data && data.length > 0 && !selectedCategoryName) {
+        setSelectedCategoryName(data[0].cat_name);
+      }
     } catch (error) {
       console.log('Error fetching categories:', error);
     }
   };
 
   const handleCategoryPress = (cat: any) => {
-    // Toggle: if same category clicked again, deselect everything
+    // 1. Toggle the selected category in context so subcategories show in header
     if (selectedCategoryName === cat.cat_name) {
       setSelectedCategoryName(null as any);
       setSelectedSubcategoryId(null as any);
     } else {
       setSelectedCategoryName(cat.cat_name);
-      // Only show subcategories, don't auto-select first one
+      // 2. Auto-select first subcategory and NAVIGATE immediately (Zero-click data update)
+      const firstSub = (cat.sub_categories && cat.sub_categories.length > 0) ? cat.sub_categories[0] : null;
+      if (firstSub) {
+        setSelectedSubcategoryId(firstSub.id);
+        // Only navigate to /post if NOT already on videos or reels tab
+        if (pathname !== '/videos' && pathname !== '/reels') {
+          router.push({
+            pathname: '/post' as any,
+            params: {
+              title: firstSub.subcat_name,
+              subcategory_id: firstSub.id,
+              type: 'category_feed'
+            }
+          });
+        }
+      } else {
+        // Fallback for categories without subcategories
+        if (pathname !== '/videos' && pathname !== '/reels') {
+          router.push({
+            pathname: '/post' as any,
+            params: {
+              title: cat.cat_name,
+              type: 'category_feed'
+            }
+          });
+        }
+      }
     }
   };
 
-  const handleSubcategoryPress = (subId: number) => {
-    // Toggle: if same subcategory clicked again, deselect it
-    if (selectedSubcategoryId === subId) {
-      setSelectedSubcategoryId(null as any);
-    } else {
-      setSelectedSubcategoryId(subId);
+  const handleSubcategoryPress = (subId: number, subName: string) => {
+    setSelectedSubcategoryId(subId);
+
+    // Only navigate to /post if NOT already on videos or reels tab
+    if (pathname !== '/videos' && pathname !== '/reels') {
+      router.push({
+        pathname: '/post' as any,
+        params: {
+          title: subName,
+          subcategory_id: subId,
+          type: 'category_feed'
+        }
+      });
     }
   };
-
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
-  });
 
   const activeSubcategories = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
 
@@ -123,10 +152,30 @@ export function CustomHeader() {
             {categories.map((cat, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.categoryItem, selectedCategoryName === cat.cat_name && { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                style={[
+                  styles.categoryItem,
+                  selectedCategoryName === cat.cat_name && {
+                    backgroundColor: theme.primary, // Using primary color for active
+                    borderRadius: 25,
+                    elevation: 5,
+                    shadowColor: theme.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    paddingHorizontal: 16
+                  }
+                ]}
                 onPress={() => handleCategoryPress(cat)}
               >
-                <Text style={[styles.categoryText, { color: theme.categoryText }]}>{cat.cat_name.toUpperCase()}</Text>
+                <Text style={[
+                  styles.categoryText,
+                  {
+                    color: selectedCategoryName === cat.cat_name ? '#fff' : theme.categoryText,
+                    fontWeight: selectedCategoryName === cat.cat_name ? '900' : 'bold'
+                  }
+                ]}>
+                  {selectedCategoryName === cat.cat_name && <Ionicons name="checkmark-circle" size={12} color="#fff" />} {cat.cat_name.toUpperCase()}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -146,13 +195,23 @@ export function CustomHeader() {
                   style={[
                     styles.subcategoryItem,
                     selectedSubcategoryId === sub.id && {
-                      borderBottomWidth: 2,
-                      borderBottomColor: theme.text
+                      borderBottomWidth: 3,
+                      borderBottomColor: theme.primary
                     }
                   ]}
-                  onPress={() => handleSubcategoryPress(sub.id)}
+                  onPress={() => handleSubcategoryPress(sub.id, sub.subcat_name)}
                 >
-                  <Text style={[styles.subcategoryText, { color: theme.subcategoryText }]}>{sub.subcat_name.toUpperCase()}</Text>
+                  <Text style={[
+                    styles.subcategoryText,
+                    {
+                      color: selectedSubcategoryId === sub.id ? theme.primary : theme.subcategoryText,
+                      fontWeight: selectedSubcategoryId === sub.id ? '900' : '600',
+                      fontSize: selectedSubcategoryId === sub.id ? 12 : 11
+                    }
+                  ]}>
+                    {selectedSubcategoryId === sub.id && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: theme.primary, marginRight: 4 }} />}
+                    {sub.subcat_name.toUpperCase()}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -160,8 +219,6 @@ export function CustomHeader() {
 
           {/* Breaking News Ticker */}
           <BreakingNewsTicker />
-
-
         </View>
       </SafeAreaView>
     </View>
@@ -196,31 +253,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   logoImage: {
     width: 200,
     height: 40,
   },
   icon: {
     opacity: 0.8,
-  },
-  dateText: {
-    fontSize: 10,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  portalButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  portalButtonText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   categoriesContainer: {
     maxHeight: 40,
@@ -258,5 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.3,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

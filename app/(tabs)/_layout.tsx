@@ -60,7 +60,7 @@ export default function TabLayout() {
                 width: 60,
                 height: 60,
                 borderRadius: 30,
-                backgroundColor: '#E31E24',
+                backgroundColor: '#a8272cff',
                 justifyContent: 'center',
                 alignItems: 'center',
                 marginBottom: 30, // Raise the button

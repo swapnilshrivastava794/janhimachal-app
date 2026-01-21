@@ -6,11 +6,9 @@ import { ToastNotification } from '@/components/ToastNotification';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { useCategory } from '@/context/CategoryContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionManager, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -21,7 +19,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedSubcategoryId, selectedCategoryName, nextSubCategory, categories } = useCategory();
   const { user, parentProfile, refreshProfile } = useAuth();
 
   const [topStories, setTopStories] = useState<any[]>([]);
@@ -32,6 +29,8 @@ export default function HomeScreen() {
   const [breakingSectionNews, setBreakingSectionNews] = useState<any[]>([]);
   const [nanhePatrakarStories, setNanhePatrakarStories] = useState<any[]>([]);
   const [videosData, setVideosData] = useState<any[]>([]);
+  const [jobsNews, setJobsNews] = useState<any[]>([]);
+  const [specialReports, setSpecialReports] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -49,7 +48,6 @@ export default function HomeScreen() {
 
   // FlatList ref
   const flatListRef = useRef<FlatList>(null);
-  const initialCategoryRef = useRef<number | null>(null);
 
   // AppState tracking for background/foreground detection
   const appState = useRef(AppState.currentState);
@@ -57,12 +55,15 @@ export default function HomeScreen() {
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
-  // Refresh profile data EVERY TIME Home screen comes into focus
+  // Refresh profile data AND News EVERY TIME Home screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Refresh Profile
       if (user) {
         refreshProfile();
       }
+      // Refresh News (Silent refresh without skeleton)
+      fetchData(false);
     }, [user])
   );
 
@@ -95,35 +96,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchData();
-
-    if (initialCategoryRef.current === null && selectedSubcategoryId) {
-      initialCategoryRef.current = selectedSubcategoryId;
-    } else if (initialCategoryRef.current !== null && selectedSubcategoryId !== initialCategoryRef.current) {
-      if (flatListRef.current) {
-        // Scroll to top of list when category changes
-        setTimeout(() => {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }, 300);
-      }
-
-      setShowLongLoading(false);
-
-      let subName = '';
-      if (categories) {
-        for (const cat of categories) {
-          const sub = cat.sub_categories?.find((s: any) => s.id === selectedSubcategoryId);
-          if (sub) {
-            subName = sub.subcat_name;
-            break;
-          }
-        }
-      }
-      if (subName) {
-        setToastMessage(`Now reading: ${subName}`);
-        setToastVisible(true);
-      }
-    }
-  }, [selectedSubcategoryId]);
+  }, []);
 
   const fetchData = async (useSkeleton = true) => {
     if (useSkeleton) setIsLoading(true);
@@ -131,11 +104,7 @@ export default function HomeScreen() {
       // Helper to fetch with fallback to 'latest' if empty
       const fetchSectionData = async (primaryParams: any, fallbackLimit: number = 5) => {
         try {
-          // If no subcategory, remove it from params
-          if (!selectedSubcategoryId) {
-            delete primaryParams.subcategory_id;
-          }
-
+          // console.log('Fetching News with params:', primaryParams); // DEBUG LOG
           const res = await getNews(primaryParams);
           const data = res.results || res || [];
           if (data.length > 0) return data;
@@ -145,9 +114,7 @@ export default function HomeScreen() {
             latest: '1',
             limit: fallbackLimit
           };
-          if (selectedSubcategoryId) {
-            fallbackParams.subcategory_id = selectedSubcategoryId;
-          }
+
 
           const fallbackRes = await getNews(fallbackParams);
           return fallbackRes.results || fallbackRes || [];
@@ -157,19 +124,22 @@ export default function HomeScreen() {
             latest: '1',
             limit: fallbackLimit
           };
-          if (selectedSubcategoryId) {
-            fallbackParams.subcategory_id = selectedSubcategoryId;
-          }
+
           const fallbackRes = await getNews(fallbackParams);
           return fallbackRes.results || fallbackRes || [];
         }
       };
 
-      // Base params for main queries
-      const baseParams: any = {};
-      if (selectedSubcategoryId) {
-        baseParams.subcategory_id = selectedSubcategoryId;
-      }
+      // Force reset selection on initial load to ensure general feed
+      // if (!initialCategoryRef.current) {
+      //   setSelectedSubcategoryId(null as any);
+      // }
+
+      // Base params for main queries with cache buster
+      const baseParams: any = {
+        ts: Date.now() // Force fresh data
+      };
+
 
       // Execute all requests in parallel
       const [
@@ -180,27 +150,32 @@ export default function HomeScreen() {
         articlesSectionData,
         breakingRes,
         nanheRes,
-        videoRes
+        videoRes,
+        jobsRes,
+        specialRes
       ] = await Promise.all([
-        getNews({ ...baseParams, limit: 10 }),
+        (async () => { 
+          console.log('Top Stories Params:', { ...baseParams, limit: 10 }); return getNews({ ...baseParams, limit: 10 }); })(), // Standard feed (matches default API)
         fetchSectionData(
-          { ...baseParams, latest: '1', limit: 5, page: 2 },
+          { ...baseParams, latest: '1', limit: 10 }, // Removed page: 2, increased limit
           5
         ),
         fetchSectionData(
-          { ...baseParams, trending: '1', latest: '1', limit: 5, page: 1 },
+          { ...baseParams, breaking: '1', limit: 5, page: 1 },
           5
         ),
         fetchSectionData(
-          { ...baseParams, headlines: '1', trending: '1', limit: 5 },
+          { ...baseParams, trending: '1', limit: 5 },
           5
         ),
         fetchSectionData(
           { ...baseParams, articles: '1', limit: 10 },
         ),
-        getNews({ ...baseParams, breaking: '1', limit: 5 }),
+        getNews({ ...baseParams, limit: 5 }), // Keeping direct call for specific types
         getSubmissions({ status: 'Approved', limit: 5 }),
-        getVideos({ ...baseParams, limit: 5 })
+        getVideos({ ...baseParams, limit: 5 }),
+        getNews({ subcategory_id: 7, limit: 5 }),
+        getNews({ subcategory_id: 23, limit: 5 })
       ]);
 
       setTopStories(topRes.results || topRes || []);
@@ -210,6 +185,8 @@ export default function HomeScreen() {
       setArticlesData(articlesSectionData);
       setBreakingSectionNews(breakingRes.results || breakingRes || []);
       setVideosData(videoRes.results || videoRes || []);
+      setJobsNews(jobsRes.results || jobsRes || []);
+      setSpecialReports(specialRes.results || specialRes || []);
 
       setTopStoriesPage(1);
       setHasMoreTopStories(true);
@@ -244,9 +221,6 @@ export default function HomeScreen() {
         limit: 10,
         page: nextPage
       };
-      if (selectedSubcategoryId) {
-        params.subcategory_id = selectedSubcategoryId;
-      }
 
       const res = await getNews(params);
 
@@ -323,7 +297,7 @@ export default function HomeScreen() {
 
   const renderHeader = () => (
     <View>
-      {/* Dashboard Banner */}
+      {/* Merged Nanhe Patrakar Banner (Poster Look + Smart Logic) */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => {
@@ -335,37 +309,29 @@ export default function HomeScreen() {
             router.push('/nanhe-patrakar-registration' as any);
           }
         }}
-        style={{ margin: 16, marginBottom: 8, borderRadius: 20, overflow: 'hidden', elevation: 8, shadowColor: '#E31E24', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12 }}
+        style={{
+          marginHorizontal: 16,
+          marginTop: 16,
+          marginBottom: 16,
+          borderRadius: 20,
+          overflow: 'hidden',
+          backgroundColor: '#fff',
+          elevation: 10,
+          shadowColor: '#E31E24',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.4,
+          shadowRadius: 12
+        }}
       >
-        <LinearGradient
-          colors={isNanhePatrakar ? ['#1e3c72', '#2a5298'] : ['#E31E24', '#8E0E00']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ padding: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <View style={{ backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 }}>
-                <Text style={{ color: '#000', fontSize: 11, fontWeight: '900' }}>
-                  {isNanhePatrakar ? 'MY DASHBOARD' : 'VOICE OF HIMACHAL'}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 }}>नन्हे पत्रकार</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600', marginTop: 4 }}>
-              {isNanhePatrakar
-                ? 'अपना पोर्टफोलियो और आईडी कार्ड देखें'
-                : 'क्या आपके बच्चे में है एक न्यूज़ रिपोर्टर?'}
-            </Text>
-          </View>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
-            <Ionicons
-              name={isNanhePatrakar ? "id-card" : "mic-outline"}
-              size={26}
-              color="#FFD700"
-            />
-          </View>
-        </LinearGradient>
+        <Image
+          source={require('@/assets/nanhe-patarkar.jpg')}
+          style={{ width: '100%', height: 350 }}
+          resizeMode="contain"
+        />
+        {/* Subtle tag overlay to indicate it's active */}
+        <View style={{ position: 'absolute', top: 15, right: 15, backgroundColor: 'rgba(227, 30, 36, 0.9)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{isNanhePatrakar ? 'MY DASHBOARD' : 'REGISTER NOW'}</Text>
+        </View>
       </TouchableOpacity>
 
       {/* Nanhe Patrakar Stories */}
@@ -420,7 +386,7 @@ export default function HomeScreen() {
 
       {/* 1. Breaking News Section (Horizontal) */}
       <View style={styles.sectionContainer}>
-        <SectionHeader title="ब्रेकिंग न्यूज़" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
+        <SectionHeader title="ताज़ा ख़बरें" onViewAll={() => handleViewAll('Breaking News', 'breaking')} />
         <FlatList
           horizontal
           data={breakingSectionNews}
@@ -584,15 +550,62 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* 7. Top Stories Header (Start of Vertical Feed) */}
+      {/* 7. रोज़गार पत्रिका (Jobs) */}
+      {jobsNews.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <SectionHeader title="रोज़गार पत्रिका" />
+          <FlatList
+            horizontal
+            data={jobsNews}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+            renderItem={({ item }) => (
+              <NewsCard
+                title={item.post_title || item.title}
+                image={item.image}
+                category="नौकरी"
+                author={item.posted_by || item.author}
+                date={item.post_date || item.date}
+                shareUrl={item.share_url}
+                onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                width={280}
+              />
+            )}
+          />
+        </View>
+      )}
+
+      {/* 8. खास रिपोर्ट (Special Reports) */}
+      {specialReports.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <SectionHeader title="खास रिपोर्ट" />
+          <FlatList
+            horizontal
+            data={specialReports}
+            keyExtractor={(item) => item.id.toString()}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+            renderItem={({ item }) => (
+              <NewsCard
+                title={item.post_title || item.title}
+                image={item.image}
+                category="विशेष"
+                author={item.posted_by || item.author}
+                date={item.post_date || item.date}
+                shareUrl={item.share_url}
+                onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+                width={300}
+              />
+            )}
+          />
+        </View>
+      )}
+
+      {/* 9. Top Stories Header (Start of Vertical Feed) */}
       <View style={[styles.sectionContainer, { marginBottom: 0 }]}>
-        {selectedCategoryName && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10, gap: 8 }}>
-            <View style={{ backgroundColor: theme.primary, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
-              <Text style={{ color: colorScheme === 'dark' ? '#000' : '#fff', fontSize: 11, fontWeight: '800' }}>{selectedCategoryName}</Text>
-            </View>
-          </View>
-        )}
         <SectionHeader
           title={`आज की बड़ी खबरें`}
           onViewAll={() => handleViewAll('Top Stories', 'top_stories')}
@@ -702,13 +715,7 @@ export default function HomeScreen() {
           maxToRenderPerBatch={5}
           windowSize={5}
           onMomentumScrollEnd={({ nativeEvent }) => {
-            const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }: any) => {
-              const paddingToBottom = 100;
-              return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-            };
-            if (isCloseToBottom(nativeEvent) && !hasMoreTopStories) {
-              nextSubCategory();
-            }
+            // nextSubCategory auto-switch logic removed for clean Home feed
           }}
         />
       )}

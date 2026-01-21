@@ -13,12 +13,12 @@ type CategoryContextType = {
 
 const CategoryContext = createContext<CategoryContextType>({
   selectedSubcategoryId: null,
-  setSelectedSubcategoryId: () => {},
+  setSelectedSubcategoryId: () => { },
   selectedCategoryName: null,
-  setSelectedCategoryName: () => {},
+  setSelectedCategoryName: () => { },
   categories: [],
-  setCategories: () => {},
-  nextSubCategory: () => {},
+  setCategories: () => { },
+  nextSubCategory: () => { },
   getNextCategoryInfo: () => null,
 });
 
@@ -26,7 +26,8 @@ export const useCategory = () => useContext(CategoryContext);
 
 export const CategoryProvider = ({ children }: { children: React.ReactNode }) => {
   // Default to null, will be set by CustomHeader after API fetch
-  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | null>(null); 
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | null>(null);
+  console.log('CategoryContext: selectedSubcategoryId is now', selectedSubcategoryId); // DEBUG LOG
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -40,18 +41,18 @@ export const CategoryProvider = ({ children }: { children: React.ReactNode }) =>
     if (!currentCategory.sub_categories) return null;
 
     const currentSubIndex = currentCategory.sub_categories.findIndex((s: any) => s.id === selectedSubcategoryId);
-    
+
     // Check if there is a next subcategory
     if (currentSubIndex !== -1 && currentSubIndex < currentCategory.sub_categories.length - 1) {
-       const nextSub = currentCategory.sub_categories[currentSubIndex + 1];
-       return { name: nextSub.subcat_name, id: nextSub.id, isNewCategory: false };
-    } 
+      const nextSub = currentCategory.sub_categories[currentSubIndex + 1];
+      return { name: nextSub.subcat_name, id: nextSub.id, isNewCategory: false };
+    }
     // If no next subcategory, check if there is a next main category
     else if (currentCatIndex < categories.length - 1) {
-       const nextCat = categories[currentCatIndex + 1];
-       if (nextCat.sub_categories && nextCat.sub_categories.length > 0) {
-           return { name: nextCat.sub_categories[0].subcat_name, categoryName: nextCat.cat_name, id: nextCat.sub_categories[0].id, isNewCategory: true };
-       }
+      const nextCat = categories[currentCatIndex + 1];
+      if (nextCat.sub_categories && nextCat.sub_categories.length > 0) {
+        return { name: nextCat.sub_categories[0].subcat_name, categoryName: nextCat.cat_name, id: nextCat.sub_categories[0].id, isNewCategory: true };
+      }
     }
     return null;
   };
@@ -59,11 +60,11 @@ export const CategoryProvider = ({ children }: { children: React.ReactNode }) =>
   const nextSubCategory = () => {
     const nextInfo = getNextCategoryInfo();
     if (nextInfo) {
-        if (nextInfo.isNewCategory && nextInfo.categoryName) {
-            setSelectedCategoryName(nextInfo.categoryName);
-        }
-        setSelectedSubcategoryId(nextInfo.id);
-        // console.log("Auto-switched to:", nextInfo.name);
+      if (nextInfo.isNewCategory && nextInfo.categoryName) {
+        setSelectedCategoryName(nextInfo.categoryName);
+      }
+      setSelectedSubcategoryId(nextInfo.id);
+      // console.log("Auto-switched to:", nextInfo.name);
     }
   };
 
