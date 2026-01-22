@@ -162,7 +162,7 @@ export default function HomeScreen() {
           5
         ),
         fetchSectionData(
-          { ...baseParams, breaking: '1', limit: 5, page: 1 },
+          { ...baseParams, breaking: '1', limit: 10, page: 1 },
           5
         ),
         fetchSectionData(
