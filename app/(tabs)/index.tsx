@@ -155,7 +155,7 @@ export default function HomeScreen() {
         specialRes
       ] = await Promise.all([
         (async () => {
-          console.log('Top Stories Params:', { ...baseParams, limit: 10 }); return getNews({ ...baseParams, limit: 10 });
+          return getNews({ ...baseParams, limit: 10 });
         })(), // Standard feed (matches default API)
         fetchSectionData(
           { ...baseParams, latest: '1', limit: 10 }, // Removed page: 2, increased limit
@@ -179,15 +179,29 @@ export default function HomeScreen() {
         getNews({ subcategory_id: 23, limit: 5 })
       ]);
 
-      setTopStories(topRes.results || topRes || []);
-      setRecentPosts(recentData);
-      setTopPicks(trendingData);
-      setPopularNews(popularData);
-      setArticlesData(articlesSectionData);
-      setBreakingSectionNews(breakingRes.results || breakingRes || []);
+      // Deduplication helper
+      const seenIds = new Set();
+      const deduplicate = (data: any[]) => {
+        return data.filter(item => {
+          if (seenIds.has(item.id)) return false;
+          seenIds.add(item.id);
+          return true;
+        });
+      };
+
+      const topStoriesData = topRes.results || topRes || [];
+      const breakingData = breakingRes.results || breakingRes || [];
+
+      // Process sections while keeping track of seen IDs to avoid duplicates across sections
+      setTopStories(deduplicate(topStoriesData));
+      setRecentPosts(deduplicate(recentData));
+      setTopPicks(deduplicate(trendingData));
+      setPopularNews(deduplicate(popularData));
+      setArticlesData(deduplicate(articlesSectionData));
+      setBreakingSectionNews(deduplicate(breakingData));
       setVideosData(videoRes.results || videoRes || []);
-      setJobsNews(jobsRes.results || jobsRes || []);
-      setSpecialReports(specialRes.results || specialRes || []);
+      setJobsNews(deduplicate(jobsRes.results || jobsRes || []));
+      setSpecialReports(deduplicate(specialRes.results || specialRes || []));
 
       setTopStoriesPage(1);
       setHasMoreTopStories(true);
@@ -229,7 +243,11 @@ export default function HomeScreen() {
 
       if (newItems.length > 0) {
         InteractionManager.runAfterInteractions(() => {
-          setTopStories(prev => [...prev, ...newItems]);
+          setTopStories(prev => {
+            const existingIds = new Set(prev.map(item => item.id));
+            const filteredNewItems = newItems.filter((item: any) => !existingIds.has(item.id));
+            return [...prev, ...filteredNewItems];
+          });
           setTopStoriesPage(nextPage);
 
           if (nextPage >= MAX_TOP_STORIES_PAGE) {
