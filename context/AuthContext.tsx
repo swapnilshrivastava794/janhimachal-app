@@ -68,20 +68,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+    const [parentProfile, setParentProfile] = useState<ParentProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkUser();
-  }, []);
+    useEffect(() => {
+        checkUser();
+    }, []);
 
-//   useEffect(() => {
-//     console.log("🔍 AuthContext State Debug:");
-//     console.log("👤 User:", JSON.stringify(user, null, 2));
-//     console.log("👨‍👩‍👧 Parent Profile:", JSON.stringify(parentProfile, null, 2));
-//     AsyncStorage.getItem('accessToken').then(token => console.log("🔑 Access Token:", token));
-//   }, [user, parentProfile]);
+    //   useEffect(() => {
+    //     console.log("🔍 AuthContext State Debug:");
+    //     console.log("👤 User:", JSON.stringify(user, null, 2));
+    //     console.log("👨‍👩‍👧 Parent Profile:", JSON.stringify(parentProfile, null, 2));
+    //     AsyncStorage.getItem('accessToken').then(token => console.log("🔑 Access Token:", token));
+    //   }, [user, parentProfile]);
 
     const checkUser = async () => {
         try {
@@ -114,17 +114,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     'Content-Type': 'multipart/form-data',
                 }
             });
-            
+
             // Handle the new response structure
             if (response.data.status === true) {
                 const { access, refresh, user_id, user_type } = response.data.data;
 
                 // Create a user object since the API only returns user_id and user_type
+                const isEmail = email.includes('@');
                 const userWithStats: User = {
                     id: user_id,
                     user_type: user_type,
-                    name: email.split('@')[0], // Fallback name from email
-                    email: email,
+                    name: isEmail ? email.split('@')[0] : (email || 'User'),
+                    email: isEmail ? email : '', // Don't store phone number in email field
+                    username: isEmail ? email.split('@')[0] : email,
                     avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=400&auto=format&fit=crop',
                     stats: {
                         savedNews: 0,
@@ -132,14 +134,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         savedArticles: 0
                     }
                 };
-                
+
                 await AsyncStorage.setItem('user', JSON.stringify(userWithStats));
                 await AsyncStorage.setItem('accessToken', access);
                 if (refresh) {
                     await AsyncStorage.setItem('refreshToken', refresh);
                 }
                 setUser(userWithStats);
-                
+
                 // Immediately fetch parent profile after login to avoid loading state on profile page
                 if (user_type === 'nanhe_patrakar') {
                     try {
@@ -177,7 +179,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.status === 200 || response.status === 201 || response.data.status === 'success') {
                 // If the response contains tokens, we can auto-login
                 if (response.data.access || response.data.tokens) {
@@ -192,10 +194,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         stats: { savedNews: 0, savedVideos: 0, savedArticles: 0 }
                     };
 
-                await AsyncStorage.setItem('user', JSON.stringify(userWithStats));
-                await AsyncStorage.setItem('accessToken', tokens.access);
-                if (tokens.refresh) await AsyncStorage.setItem('refreshToken', tokens.refresh);
-                setUser(userWithStats);
+                    await AsyncStorage.setItem('user', JSON.stringify(userWithStats));
+                    await AsyncStorage.setItem('accessToken', tokens.access);
+                    if (tokens.refresh) await AsyncStorage.setItem('refreshToken', tokens.refresh);
+                    setUser(userWithStats);
                 } else if (data.password && data.username) {
                     // Fallback to manual login if signup was successful but didn't return tokens
                     // Use username instead of email for login
@@ -226,7 +228,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updateProfile = async (data: any) => {
         try {
             const { updateNormalProfile, updateParentProfile } = require('../api/server');
-            
+
             let response;
             if (user?.user_type === 'nanhe_patrakar') {
                 // console.log('🔄 AuthContext: Updating Parent Profile...');
@@ -252,7 +254,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updateUserType = async (newType: string) => {
         try {
             // console.log('🔄 AuthContext: Attempting to update user_type to:', newType);
-            
+
             // 1. Update AsyncStorage
             const currentUserStr = await AsyncStorage.getItem('user');
             if (currentUserStr) {
@@ -265,7 +267,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser((prevUser) => {
                 if (!prevUser) {
                     // If state was null, maybe we can reconstruct from storage
-                    return prevUser; 
+                    return prevUser;
                 }
                 // console.log('✅ AuthContext: State updated for user:', prevUser.id);
                 return { ...prevUser, user_type: newType };
@@ -287,21 +289,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             // console.log('🔄 AuthContext: Refreshing Profile Data...');
             const { getParentProfile } = require('../api/server');
             const response = await getParentProfile();
-            
+
             // console.log('📡 AuthContext: Parent Profile API Response:', JSON.stringify(response.data, null, 2));
 
             if (response.data && response.data.status) {
                 const data = response.data.data;
-                
+
                 // Update basic user info
                 const userData = data.user;
                 let updatedUser: User | null = null;
-                
+
                 if (userData) {
                     updatedUser = {
                         ...user, // Keep existing fields like avatar/stats if any
                         id: userData.id,
                         email: userData.email,
+                        username: userData.username,
                         first_name: userData.first_name,
                         last_name: userData.last_name,
                         name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
@@ -317,16 +320,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 if (data.parent_profile) {
                     // console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
                     setParentProfile(data.parent_profile);
-                    
+
                     // Ensure user_type is updated
-                     if (user?.user_type !== 'nanhe_patrakar') {
+                    if (user?.user_type !== 'nanhe_patrakar') {
                         // We need to update user_type in state as well if it wasn't caught in the user update above
-                         const baseUser = updatedUser || user;
-                         if (baseUser) {
-                             const updatedWithRole = { ...baseUser, user_type: 'nanhe_patrakar' };
-                             setUser(updatedWithRole);
-                             await AsyncStorage.setItem('user', JSON.stringify(updatedWithRole));
-                         }
+                        const baseUser = updatedUser || user;
+                        if (baseUser) {
+                            const updatedWithRole = { ...baseUser, user_type: 'nanhe_patrakar' };
+                            setUser(updatedWithRole);
+                            await AsyncStorage.setItem('user', JSON.stringify(updatedWithRole));
+                        }
                     }
 
                 } else {
@@ -340,16 +343,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            parentProfile, 
-            isLoading, 
-            login, 
-            signup, 
-            updateProfile, 
-            updateUserType, 
-            refreshProfile, 
-            logout 
+        <AuthContext.Provider value={{
+            user,
+            parentProfile,
+            isLoading,
+            login,
+            signup,
+            updateProfile,
+            updateUserType,
+            refreshProfile,
+            logout
         }}>
             {children}
         </AuthContext.Provider>
