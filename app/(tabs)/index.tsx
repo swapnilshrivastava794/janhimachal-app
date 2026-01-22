@@ -192,13 +192,20 @@ export default function HomeScreen() {
       const topStoriesData = topRes.results || topRes || [];
       const breakingData = breakingRes.results || breakingRes || [];
 
-      // Process sections while keeping track of seen IDs to avoid duplicates across sections
+      // "Latest" sections should not be deduplicated (user request)
+      setRecentPosts(recentData);
+      setBreakingSectionNews(breakingData);
+
+      // We still track their IDs to avoid repeating them in OTHER sections (like Top Stories)
+      recentData.forEach((item: any) => seenIds.add(item.id));
+      breakingData.forEach((item: any) => { if (item.id) seenIds.add(item.id); });
+
+      // Process other sections while keeping track of seen IDs to avoid duplicates across sections
       setTopStories(deduplicate(topStoriesData));
-      setRecentPosts(deduplicate(recentData));
       setTopPicks(deduplicate(trendingData));
       setPopularNews(deduplicate(popularData));
       setArticlesData(deduplicate(articlesSectionData));
-      setBreakingSectionNews(deduplicate(breakingData));
+
       setVideosData(videoRes.results || videoRes || []);
       setJobsNews(deduplicate(jobsRes.results || jobsRes || []));
       setSpecialReports(deduplicate(specialRes.results || specialRes || []));
