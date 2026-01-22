@@ -525,7 +525,7 @@ export default function HomeScreen() {
       </View>
 
       {/* 5. Recent News (Horizontal) */}
-      <View style={styles.sectionContainer}>
+      {/* <View style={styles.sectionContainer}>
         <SectionHeader title="ताज़ा खबरें" onViewAll={() => handleViewAll('Recent Posts', 'recent')} />
         <FlatList
           horizontal
@@ -547,7 +547,7 @@ export default function HomeScreen() {
             />
           )}
         />
-      </View>
+      </View> */}
 
       {/* 6. Articles (Horizontal) */}
       {articlesData.length > 0 && (
