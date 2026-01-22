@@ -78,7 +78,7 @@ export default function SignupScreen() {
                 </View>
 
                 <View style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
-                    <Ionicons name="at-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
+                    <Ionicons name="call-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                     <TextInput 
                         style={[styles.input, { color: theme.text }]}
                         placeholder="मोबाइल नंबर (Mobile Number)"
