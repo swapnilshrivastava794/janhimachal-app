@@ -81,7 +81,7 @@ export default function SignupScreen() {
                     <Ionicons name="at-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                     <TextInput 
                         style={[styles.input, { color: theme.text }]}
-                        placeholder="यूजरनेम (Username)"
+                        placeholder="मोबाइल नंबर (Mobile Number)"
                         placeholderTextColor={theme.placeholderText}
                         autoCapitalize="none"
                         value={username}
