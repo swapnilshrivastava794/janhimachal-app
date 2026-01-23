@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -11,40 +11,39 @@ import { useCategory } from '@/context/CategoryContext';
 import { BreakingNewsTicker } from '@/components/BreakingNewsTicker';
 import { WeatherWidget } from '@/components/WeatherWidget';
 
-// ... (Imports and CATEGORY_DATA remain same)
-
 export function CustomHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const { selectedCategoryName, setSelectedCategoryName, selectedSubcategoryId, setSelectedSubcategoryId, categories, setCategories } = useCategory();
+  const isDark = colorScheme === 'dark';
+
+  const {
+    selectedCategoryName,
+    setSelectedCategoryName,
+    selectedSubcategoryId,
+    setSelectedSubcategoryId,
+    categories,
+    setCategories
+  } = useCategory();
+
   const categoryScrollRef = React.useRef<ScrollView>(null);
   const subCategoryScrollRef = React.useRef<ScrollView>(null);
 
-  // Auto-scroll effect for Categories/Subcategories
+  const displayDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'short', day: 'numeric'
+  }).toUpperCase();
+
+  // Auto-scroll logic 
   React.useEffect(() => {
-    // Scroll subcategory into view
     if (subCategoryScrollRef.current && selectedSubcategoryId && categories.length > 0) {
-       const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
-       const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
-       if (index !== -1) {
-          // Estimate position (assuming ~100px width per item)
-          // For more precision, we'd use onLayout, but this is a rough "scroll to make visible"
-           subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
-       }
+      const activeSubcats = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
+      const index = activeSubcats.findIndex((s: any) => s.id === selectedSubcategoryId);
+      if (index !== -1) {
+        subCategoryScrollRef.current.scrollTo({ x: index * 80, animated: true });
+      }
     }
   }, [selectedSubcategoryId]);
-
-  React.useEffect(() => {
-    // Scroll main category into view
-    if (categoryScrollRef.current && selectedCategoryName && categories.length > 0) {
-        const index = categories.findIndex(c => c.cat_name === selectedCategoryName);
-        if (index !== -1) {
-            categoryScrollRef.current.scrollTo({ x: index * 90, animated: true });
-        }
-    }
-  }, [selectedCategoryName]);
-
 
   React.useEffect(() => {
     fetchCategories();
@@ -55,16 +54,8 @@ export function CustomHeader() {
       const res = await getCategories();
       const data = res.data;
       setCategories(data);
-      if (data.length > 0 && !selectedCategoryName) {
-         // User Default: "UAE News" -> "Know UAE"
-         const defaultCat = data.find((c: any) => c.cat_name === "UAE News") || data[0];
-         setSelectedCategoryName(defaultCat.cat_name);
-         
-         // Find "Know UAE" in subcategories
-         if (defaultCat.sub_categories && defaultCat.sub_categories.length > 0) {
-             const defaultSub = defaultCat.sub_categories.find((s: any) => s.subcat_name === "Know UAE") || defaultCat.sub_categories[0];
-             setSelectedSubcategoryId(defaultSub.id);
-         }
+      if (data && data.length > 0 && !selectedCategoryName) {
+        setSelectedCategoryName(data[0].cat_name);
       }
     } catch (error) {
       console.log('Error fetching categories:', error);
@@ -72,104 +63,137 @@ export function CustomHeader() {
   };
 
   const handleCategoryPress = (cat: any) => {
-    setSelectedCategoryName(cat.cat_name);
-    // Automatically select first subcategory or clear selection?
-    // User logic: "subcategory_id header select hogi"
-    // Usually selecting a main category might select "All" or first subcat.
-    // For now, if subcategories exist, maybe default to first one?
-    // The previous logic didn't enforce a subcat selection on category press.
-    // But since HomeScreen depends on subcategory_id, we should update it.
-    if (cat.sub_categories && cat.sub_categories.length > 0) {
-        setSelectedSubcategoryId(cat.sub_categories[0].id);
+    if (selectedCategoryName === cat.cat_name) {
+      setSelectedCategoryName(null as any);
+      setSelectedSubcategoryId(null as any);
     } else {
-        setSelectedSubcategoryId(null as any); // Or 0
+      setSelectedCategoryName(cat.cat_name);
+      const firstSub = (cat.sub_categories && cat.sub_categories.length > 0) ? cat.sub_categories[0] : null;
+      if (firstSub) {
+        setSelectedSubcategoryId(firstSub.id);
+        if (pathname !== '/videos' && pathname !== '/reels') {
+          router.push({
+            pathname: '/post' as any,
+            params: { title: firstSub.subcat_name, subcategory_id: firstSub.id, type: 'category_feed' }
+          });
+        }
+      } else {
+        if (pathname !== '/videos' && pathname !== '/reels') {
+          router.push({
+            pathname: '/post' as any,
+            params: { title: cat.cat_name, type: 'category_feed' }
+          });
+        }
+      }
     }
   };
 
-  const handleSubcategoryPress = (subId: number) => {
-      setSelectedSubcategoryId(subId);
+  const handleSubcategoryPress = (subId: number, subName: string) => {
+    setSelectedSubcategoryId(subId);
+    if (pathname !== '/videos' && pathname !== '/reels') {
+      router.push({
+        pathname: '/post' as any,
+        params: { title: subName, subcategory_id: subId, type: 'category_feed' }
+      });
+    }
   };
-
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
-  });
 
   const activeSubcategories = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
       <SafeAreaView>
-        <View style={styles.topBar}>
-          <View style={[styles.leftRow, { flex: 1 }]}>
-             <WeatherWidget />
+        {/* Top Navbar - Sharp & Bold */}
+        <View style={[styles.topBar, { borderBottomColor: isDark ? '#1a1a1a' : '#f0f0f0' }]}>
+          {/* Left: Highlighted Date */}
+          <View style={styles.sideBlock}>
+            <Text style={[styles.topDateText, { color: isDark ? '#fff' : '#111' }]}>{displayDate}</Text>
+            <WeatherWidget />
           </View>
-          
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('@/assets/logo.png')} 
-              style={styles.logoImage} 
+
+          {/* Center: Hero Logo */}
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require('@/assets/logo.png')}
+              style={styles.logoImage}
               resizeMode="contain"
             />
           </View>
 
-          <View style={[styles.rightRow, { flex: 1, justifyContent: 'flex-end' }]}>
-            <TouchableOpacity onPress={() => router.push('/search')}>
-                <Ionicons name="search" size={24} color={theme.text} style={styles.icon} />
+          {/* Right: Sharp Icons */}
+          <View style={[styles.sideBlock, { alignItems: 'flex-end' }]}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/search')}>
+              <Ionicons name="search" size={24} color={isDark ? '#fff' : '#111'} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Categories Tabs */}
-        <View>
-          <ScrollView 
+        {/* Category Navigation - Solid Line Design */}
+        <View style={[styles.navSection, { borderBottomColor: isDark ? '#1a1a1a' : '#eeeeee' }]}>
+          <ScrollView
             ref={categoryScrollRef}
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={[styles.categoriesContainer, { backgroundColor: theme.categoryBg }]}
-            contentContainerStyle={styles.categoriesContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScrollContent}
           >
-            {categories.map((cat, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={[styles.categoryItem, selectedCategoryName === cat.cat_name && { backgroundColor: 'rgba(255,255,255,0.2)' }]}
-                onPress={() => handleCategoryPress(cat)}
-              >
-                <Text style={[styles.categoryText, { color: theme.categoryText }]}>{cat.cat_name.toUpperCase()}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Subcategories */}
-          {activeSubcategories.length > 0 && (
-            <ScrollView 
-              ref={subCategoryScrollRef}
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              style={[styles.subcategoriesContainer, { backgroundColor: theme.subcategoryBg }]}
-              contentContainerStyle={styles.subcategoriesContent}
-            >
-              {activeSubcategories.map((sub: any, index: number) => (
-                <TouchableOpacity 
-                    key={index} 
-                    style={[
-                        styles.subcategoryItem, 
-                        selectedSubcategoryId === sub.id && { 
-                            borderBottomWidth: 2, 
-                            borderBottomColor: theme.text 
-                        }
-                    ]}
-                    onPress={() => handleSubcategoryPress(sub.id)}
+            {categories.map((cat, index) => {
+              const isActive = selectedCategoryName === cat.cat_name;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  activeOpacity={0.8}
+                  onPress={() => handleCategoryPress(cat)}
+                  style={styles.categoryItem}
                 >
-                  <Text style={[styles.subcategoryText, { color: theme.subcategoryText }]}>{sub.subcat_name.toUpperCase()}</Text>
+                  <Text style={[
+                    styles.categoryText,
+                    { color: isActive ? (isDark ? '#fff' : '#000') : (isDark ? '#999' : '#000') }, // Maximum darkness for inactive text
+                    isActive && { fontWeight: '900' }
+                  ]}>
+                    {cat.cat_name.toUpperCase()}
+                  </Text>
+                  {isActive && <View style={[styles.activeBar, { backgroundColor: isDark ? '#fff' : '#000' }]} />}
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+              );
+            })}
+          </ScrollView>
+        </View>
 
-          {/* Breaking News Ticker */}
+        {/* Subcategories - Crisp & Dark Text */}
+        {activeSubcategories.length > 0 && (
+          <View style={styles.subnavSection}>
+            <ScrollView
+              ref={subCategoryScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.subcategoryScrollContent}
+            >
+              {activeSubcategories.map((sub: any, index: number) => {
+                const isSubActive = selectedSubcategoryId === sub.id;
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    activeOpacity={0.7}
+                    onPress={() => handleSubcategoryPress(sub.id, sub.subcat_name)}
+                    style={styles.subcategoryItem}
+                  >
+                    <Text style={[
+                      styles.subcategoryText,
+                      { color: isSubActive ? (isDark ? '#fff' : '#000') : (isDark ? '#111' : '#222') }, // Darker subcategories
+                      isSubActive && { fontWeight: '900' }
+                    ]}>
+                      {sub.subcat_name.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Ticker at the bottom with a solid divider */}
+        <View style={[styles.tickerWrapper, { borderTopColor: isDark ? '#222' : '#ddd' }]}>
           <BreakingNewsTicker />
-          
-          
         </View>
       </SafeAreaView>
     </View>
@@ -178,93 +202,80 @@ export function CustomHeader() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    borderBottomWidth: 1,
-    paddingBottom: 0,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
   },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    height: 60,
+    paddingHorizontal: 20,
+    height: 65,
+    borderBottomWidth: 2, // Even bolder divider
   },
-  leftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  sideBlock: {
+    width: 90, // Slightly wider for bold date
   },
-  rightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  topDateText: {
+    fontSize: 13, // Larger date
+    fontWeight: '900',
+    letterSpacing: 1.2,
   },
-  logoContainer: {
+  logoWrapper: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   logoImage: {
-    width: 200,
-    height: 40,
+    width: 145,
+    height: 45,
   },
-  icon: {
-    opacity: 0.8,
+  navSection: {
+    paddingTop: 8,
+    borderBottomWidth: 1.5,
   },
-  dateText: {
-    fontSize: 10,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  portalButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  portalButtonText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  categoriesContainer: {
-    maxHeight: 40,
-  },
-  categoriesContent: {
-    alignItems: 'center',
-    paddingHorizontal: 8,
+  categoryScrollContent: {
+    paddingHorizontal: 20,
+    gap: 22,
+    height: 42,
   },
   categoryItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 2,
-    borderRadius: 4,
+    height: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  subcategoriesContainer: {
-    maxHeight: 36,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+  activeBar: {
+    position: 'absolute',
+    bottom: 0,
+    width: '110%', // Sligthly wider than text for a bold look
+    height: 3.5,
+    borderRadius: 0, // Sharp square ends
   },
-  subcategoriesContent: {
-    alignItems: 'center',
-    paddingHorizontal: 8,
+  subnavSection: {
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+  },
+  subcategoryScrollContent: {
+    paddingHorizontal: 20,
+    gap: 20,
   },
   subcategoryItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 2,
+    justifyContent: 'center',
   },
   subcategoryText: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontSize: 10.5,
+    letterSpacing: 0.5,
   },
+  tickerWrapper: {
+    borderTopWidth: 1.5,
+  }
 });

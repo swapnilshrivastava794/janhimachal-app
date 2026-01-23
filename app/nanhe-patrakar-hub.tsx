@@ -67,7 +67,7 @@ export default function NanhePatrakarHubScreen() {
     const router = useRouter();
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
-    const { user } = useAuth();
+    const { user, parentProfile } = useAuth();
     const [activeFilter, setActiveFilter] = useState('All');
     const [childProfiles, setChildProfiles] = useState<any[]>([]);
     const [topics, setTopics] = useState<any[]>([]);
@@ -167,8 +167,16 @@ export default function NanhePatrakarHubScreen() {
                     </View>
                 </View>
                 {!hasRegisteredChild && (
-                    <TouchableOpacity 
-                        onPress={() => router.push('/nanhe-patrakar' as any)}
+                    <TouchableOpacity
+                        onPress={() => {
+                            if (!user) {
+                                router.push('/auth/login' as any);
+                            } else if (parentProfile) {
+                                router.push('/nanhe-patrakar-portfolio' as any);
+                            } else {
+                                router.push('/nanhe-patrakar-registration' as any);
+                            }
+                        }}
                         style={[styles.joinHeaderBtn, { backgroundColor: theme.primary }]}
                     >
                         <Text style={styles.joinHeaderBtnText}>Join Now</Text>
@@ -177,12 +185,20 @@ export default function NanhePatrakarHubScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                
+
                 {/* --- Join Program Banner --- */}
                 {!hasRegisteredChild && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         activeOpacity={0.9}
-                        onPress={() => router.push('/nanhe-patrakar' as any)}
+                        onPress={() => {
+                            if (!user) {
+                                router.push('/auth/login' as any);
+                            } else if (parentProfile) {
+                                router.push('/nanhe-patrakar-portfolio' as any);
+                            } else {
+                                router.push('/nanhe-patrakar-registration' as any);
+                            }
+                        }}
                         style={styles.joinBanner}
                     >
                         <LinearGradient
@@ -201,14 +217,14 @@ export default function NanhePatrakarHubScreen() {
                         </LinearGradient>
                     </TouchableOpacity>
                 )}
-                
+
                 {/* --- Story Circles (Featured) --- */}
                 <View style={styles.storyStrip}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storyScroll}>
                         {childProfiles.length > 0 ? (
                             childProfiles.map((child) => (
-                                <TouchableOpacity 
-                                    key={child.id} 
+                                <TouchableOpacity
+                                    key={child.id}
                                     style={styles.storyCircleWrapper}
                                     onPress={() => router.push({ pathname: '/nanhe-patrakar-child-profile', params: { id: child.id } } as any)}
                                 >
@@ -216,9 +232,9 @@ export default function NanhePatrakarHubScreen() {
                                         colors={['#FFD700', '#FFA500']}
                                         style={styles.storyRing}
                                     >
-                                        <Image 
-                                            source={{ uri: child.photo ? `${constant.appBaseUrl}${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }} 
-                                            style={styles.storyAvatar} 
+                                        <Image
+                                            source={{ uri: child.photo ? `${constant.appBaseUrl}${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }}
+                                            style={styles.storyAvatar}
                                             onLoad={() => console.log('✅ Image loaded:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
                                             onError={(e) => console.error('❌ Image load error:', e.nativeEvent.error, 'URL:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
                                         />
@@ -230,7 +246,7 @@ export default function NanhePatrakarHubScreen() {
                             ))
                         ) : isLoadingProfiles ? (
                             // Shimmer or generic circles could go here
-                            [1,2,3,4,5].map((i) => (
+                            [1, 2, 3, 4, 5].map((i) => (
                                 <View key={i} style={styles.storyCircleWrapper}>
                                     <View style={[styles.storyRing, { backgroundColor: theme.borderColor + '40' }]} />
                                     <View style={{ height: 10, width: 40, backgroundColor: theme.borderColor + '40', marginTop: 5, borderRadius: 5 }} />
@@ -256,10 +272,10 @@ export default function NanhePatrakarHubScreen() {
                 <View style={styles.filterStrip}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
                         {/* Always show "All" */}
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => setActiveFilter('All')}
                             style={[
-                                styles.filterTab, 
+                                styles.filterTab,
                                 { backgroundColor: activeFilter === 'All' ? theme.primary : ((theme as any).card || theme.background) }
                             ]}
                         >
@@ -268,11 +284,11 @@ export default function NanhePatrakarHubScreen() {
 
                         {/* Show dynamic topics */}
                         {topics.map((t) => (
-                            <TouchableOpacity 
-                                key={t.id} 
+                            <TouchableOpacity
+                                key={t.id}
                                 onPress={() => setActiveFilter(t.title)}
                                 style={[
-                                    styles.filterTab, 
+                                    styles.filterTab,
                                     { backgroundColor: activeFilter === t.title ? theme.primary : ((theme as any).card || theme.background) }
                                 ]}
                             >
@@ -295,47 +311,47 @@ export default function NanhePatrakarHubScreen() {
                     ) : submissions.length > 0 ? (
                         submissions.map((post) => {
                             const firstMedia = post.media_files && post.media_files.length > 0 ? post.media_files[0].file : null;
-                            const imageUrl = firstMedia 
-                                ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`) 
+                            const imageUrl = firstMedia
+                                ? (firstMedia.startsWith('http') ? firstMedia : `${constant.appBaseUrl}${firstMedia}`)
                                 : `${constant.appBaseUrl}/wp-content/uploads/2023/04/jan-himachal-logo.png`;
 
                             return (
-                                <TouchableOpacity 
-                                    key={post.id} 
+                                <TouchableOpacity
+                                    key={post.id}
                                     style={[styles.hubCard, { backgroundColor: (theme as any).card || theme.background }]}
                                     activeOpacity={0.9}
                                     onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: post.id } } as any)}
                                 >
-                                <Image source={{ uri: imageUrl }} style={styles.cardImg} />
-                                <LinearGradient
-                                    colors={['transparent', 'rgba(0,0,0,0.8)']}
-                                    style={styles.cardOverlay}
-                                >
-                                    <View style={styles.cardHeader}>
-                                        <View style={styles.catBadge}>
-                                            <Text style={styles.catText}>{post.topic_title_hindi || post.topic_title}</Text>
-                                        </View>
-                                        <View style={styles.viewBadge}>
-                                            <Ionicons name="eye" size={12} color="#fff" />
-                                            <Text style={styles.viewText}>{post.views || '0'}</Text>
-                                        </View>
-                                    </View>
-                                    
-                                    <View style={styles.cardFooter}>
-                                        <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
-                                        <View style={styles.authorRow}>
-                                            <View style={styles.authorCircle}>
-                                                <Ionicons name="person" size={10} color="#fff" />
+                                    <Image source={{ uri: imageUrl }} style={styles.cardImg} />
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(0,0,0,0.8)']}
+                                        style={styles.cardOverlay}
+                                    >
+                                        <View style={styles.cardHeader}>
+                                            <View style={styles.catBadge}>
+                                                <Text style={styles.catText}>{post.topic_title_hindi || post.topic_title}</Text>
                                             </View>
-                                            <Text style={styles.authorName}>{post.child_name}</Text>
-                                            <View style={styles.dot} />
-                                            <Text style={styles.authorSchool} numberOfLines={1}>
-                                                Group {post.child_age_group}
-                                            </Text>
+                                            <View style={styles.viewBadge}>
+                                                <Ionicons name="eye" size={12} color="#fff" />
+                                                <Text style={styles.viewText}>{post.views || '0'}</Text>
+                                            </View>
                                         </View>
-                                    </View>
-                                </LinearGradient>
-                            </TouchableOpacity>
+
+                                        <View style={styles.cardFooter}>
+                                            <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
+                                            <View style={styles.authorRow}>
+                                                <View style={styles.authorCircle}>
+                                                    <Ionicons name="person" size={10} color="#fff" />
+                                                </View>
+                                                <Text style={styles.authorName}>{post.child_name}</Text>
+                                                <View style={styles.dot} />
+                                                <Text style={styles.authorSchool} numberOfLines={1}>
+                                                    Group {post.child_age_group}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </LinearGradient>
+                                </TouchableOpacity>
                             )
                         })
                     ) : (
@@ -348,8 +364,8 @@ export default function NanhePatrakarHubScreen() {
 
                 {/* --- Load More --- */}
                 {hasNextPage && (
-                    <TouchableOpacity 
-                        style={[styles.loadMoreBtn, { borderColor: theme.borderColor }]} 
+                    <TouchableOpacity
+                        style={[styles.loadMoreBtn, { borderColor: theme.borderColor }]}
                         onPress={loadMore}
                         disabled={isMoreLoading}
                     >
@@ -365,7 +381,7 @@ export default function NanhePatrakarHubScreen() {
 
             {/* --- Submit FAB (Only for registered kids) --- */}
             {hasRegisteredChild && (
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.fab, { backgroundColor: theme.primary }]}
                     onPress={() => router.push('/nanhe-patrakar-submission' as any)}
                 >
@@ -445,7 +461,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    
+
     // Story Circles
     storyStrip: { marginBottom: 25 },
     storyScroll: { paddingHorizontal: 15 },
@@ -522,7 +538,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     viewText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-    
+
     cardFooter: { gap: 8 },
     postTitle: {
         fontSize: 20,
@@ -547,17 +563,17 @@ const styles = StyleSheet.create({
     dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(255,255,255,0.5)' },
     authorSchool: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '500', flex: 1 },
 
-  // Load More
-  loadMoreBtn: { 
-    margin: 20, 
-    padding: 15, 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center',
-    marginBottom: 40
-  },
-  loadMoreText: { fontWeight: '700', fontSize: 14 },
+    // Load More
+    loadMoreBtn: {
+        margin: 20,
+        padding: 15,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 40
+    },
+    loadMoreText: { fontWeight: '700', fontSize: 14 },
     fab: {
         position: 'absolute',
         bottom: 30,

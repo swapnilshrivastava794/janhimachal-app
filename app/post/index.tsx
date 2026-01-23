@@ -16,12 +16,18 @@ export default function PostIndexScreen() {
   const params = useLocalSearchParams();
   const title = params.title as string || 'News';
   const type = params.type as string; // 'top_stories', 'recent', etc.
-  
+  // Prioritize param subcategory_id for direct navigation
+  const paramSubId = params.subcategory_id ? Number(params.subcategory_id) : null;
+
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
 
   const { selectedSubcategoryId } = useCategory();
+  // Use param ID if available, otherwise fallback to context (though we are moving away from context)
+  const activeSubcategoryId = paramSubId ?? selectedSubcategoryId;
+
   const [newsData, setNewsData] = React.useState<any[]>([]);
+  const [videos, setVideos] = React.useState<any[]>([]);
   const [page, setPage] = React.useState(1);
   const [loading, setLoading] = React.useState(false);
   const [hasMore, setHasMore] = React.useState(true);
@@ -33,190 +39,247 @@ export default function PostIndexScreen() {
     setPage(1);
     setHasMore(true);
     fetchNews(1);
-  }, [type, selectedSubcategoryId]);
+  }, [type, activeSubcategoryId]);
 
   const fetchNews = async (pageNum: number) => {
-    if (loading) return; 
+    if (loading) return;
     setLoading(true);
     try {
-        let params: any = { 
-            limit: 20, 
-            page: pageNum,
-            subcategory_id: selectedSubcategoryId
-        };
+      let params: any = {
+        limit: 20,
+        page: pageNum,
+        ts: Date.now() // Cache buster
+      };
 
-        // Param mapping based on type
-        switch(type) {
-            case 'recent': 
-                params.latest = '1';
-                break;
-            case 'top_picks':
-                params.trending = '1';
-                break;
-            case 'popular':
-                params.headlines = '1';
-                params.trending = '1';
-                break;
-            case 'articles':
-                params.articles = '1';
-                params.trending = '1';
-                params.latest = '1';
-                break;
-            case 'breaking':
-                // For View All Breaking, we prioritize Latest since "Mixed" is hard to paginate.
-                // Or we can use HeadLines.
-                // Let's use Latest for infinite scroll consistency.
-                params.latest = '1'; 
-                break;
-            case 'top_stories':
-            default:
-                // Default params are fine
-                break;
+      if (activeSubcategoryId) {
+        params.subcategory_id = activeSubcategoryId;
+      }
+
+      // Param mapping based on type
+      switch (type) {
+        case 'recent':
+          params.latest = '1';
+          break;
+        case 'top_picks':
+          params.trending = '1';
+          break;
+        case 'popular':
+          params.headlines = '1';
+          params.trending = '1';
+          break;
+        case 'articles':
+          params.articles = '1';
+          params.trending = '1';
+          params.latest = '1';
+          break;
+        case 'breaking':
+          // Use the correct 'breaking' parameter to match the home screen section
+          params.breaking = '1';
+          break;
+        case 'top_stories':
+        default:
+          // Default params are fine
+          break;
+      }
+
+      const res = await getNews(params);
+      const newItems = res.results || res || [];
+
+      if (newItems.length < 10) {
+        setHasMore(false);
+      }
+
+      setNewsData(prev => pageNum === 1 ? newItems : [...prev, ...newItems]);
+
+      // Fetch videos for this category if it's the first page
+      if (pageNum === 1 && activeSubcategoryId) {
+        try {
+          const vRes = await getNews({ subcategory_id: activeSubcategoryId, video_type: '1', limit: 5 });
+          setVideos(vRes.results || vRes || []);
+        } catch (e) {
+          console.log("Error fetching category videos:", e);
         }
-
-        const res = await getNews(params);
-        const newItems = res.results || res || [];
-        
-        if (newItems.length < 10) {
-            setHasMore(false);
-        }
-
-        setNewsData(prev => pageNum === 1 ? newItems : [...prev, ...newItems]);
+      }
     } catch (error) {
-        console.log("Error fetching post index:", error);
+      console.log("Error fetching post index:", error);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const loadMore = () => {
-      if (!loading && hasMore) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchNews(nextPage);
-      }
+    if (!loading && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchNews(nextPage);
+    }
   };
 
   // Render the large "Hero" card for the first item (if not breaking news)
   const renderHeader = React.useCallback(() => {
     // If breaking news (no images) or empty, no hero
     if (isBreaking || newsData.length === 0) return null;
-    
+
     // Use the first item as Hero
-    const heroItem = newsData[0] as any; 
-    
+    const heroItem = newsData[0] as any;
+
     // Safety check for image
     if (!heroItem.image) return null;
 
     return (
-      <TouchableOpacity onPress={() => router.push({ pathname: '/post/[id]', params: { id: heroItem.id } })} activeOpacity={0.9}>
-        <View style={styles.heroContainer}>
+      <View>
+        <TouchableOpacity onPress={() => router.push({ pathname: '/post/[id]', params: { id: heroItem.id } })} activeOpacity={0.9}>
+          <View style={styles.heroContainer}>
             <Image source={{ uri: heroItem.image }} style={styles.heroImage} />
             <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.8)']}
-            style={styles.heroGradient}
+              colors={['transparent', 'rgba(0,0,0,0.8)']}
+              style={styles.heroGradient}
             >
-            <View style={styles.heroContent}>
+              <View style={styles.heroContent}>
                 <Text style={styles.heroCategory}>{heroItem.category || 'News'}</Text>
                 <Text style={styles.heroTitle}>{heroItem.post_title || heroItem.title}</Text>
                 <View style={styles.heroMetaRow}>
-                    <Text style={styles.heroAuthor}>{heroItem.posted_by || heroItem.author || "Unknown"}</Text>
-                    <Text style={styles.heroDate}>{heroItem.post_date || heroItem.date}</Text>
+                  <Text style={styles.heroAuthor}>{heroItem.posted_by || heroItem.author || "Unknown"}</Text>
+                  <Text style={styles.heroDate}>{heroItem.post_date || heroItem.date}</Text>
                 </View>
-            </View>
+              </View>
             </LinearGradient>
-        </View>
-      </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+
+        {/* Category Videos Section */}
+        {videos.length > 0 && (
+          <View style={{ marginBottom: 24 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 15 }}>
+              <Ionicons name="play-circle" size={24} color={theme.accent || '#E31E24'} />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>ताज़ा वीडियो</Text>
+            </View>
+            <FlatList
+              horizontal
+              data={videos}
+              keyExtractor={(v) => v.id.toString()}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+              renderItem={({ item: v }) => {
+                const vTitle = v.video_title || v.post_title || v.title;
+                let vImage = v.thumbnail || v.image;
+                if (v.video_url && (!vImage || vImage.includes('na.jpg'))) {
+                  vImage = `https://img.youtube.com/vi/${v.video_url}/hqdefault.jpg`;
+                }
+                return (
+                  <TouchableOpacity
+                    style={{ width: 240, marginRight: 15 }}
+                    onPress={() => router.push({ pathname: '/post/[id]', params: { id: v.id, type: 'video' } })}
+                  >
+                    <Image source={{ uri: vImage }} style={{ width: '100%', height: 135, borderRadius: 12 }} />
+                    <View style={{ position: 'absolute', top: '25%', left: '42%', opacity: 0.9 }}>
+                      <Ionicons name="play-circle" size={40} color="#fff" />
+                    </View>
+                    <Text style={{ color: theme.text, fontSize: 13, fontWeight: '700', marginTop: 8 }} numberOfLines={2}>{vTitle}</Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+            <View style={{ height: 1, backgroundColor: theme.borderColor, marginHorizontal: 20, marginTop: 20 }} />
+          </View>
+        )}
+      </View>
     );
-  }, [isBreaking, newsData, router]);
+  }, [isBreaking, newsData, videos, router, theme]);
 
   const renderItem = React.useCallback(({ item, index }: { item: any, index: number }) => {
-     // Skip the first item if we rendered it as a Hero (except for breaking where we don't have hero)
-     if (!isBreaking && index === 0) return null;
+    // Skip the first item if we rendered it as a Hero (except for breaking where we don't have hero)
+    if (!isBreaking && index === 0) return null;
 
-     if (isBreaking) {
-         return (
-            <View style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}>
-                <View style={styles.breakingIconRow}>
-                    <View style={styles.breakingDot} />
-                    <Text style={[styles.breakingMeta, { color: theme.accent }]}>BREAKING NOW</Text>
-                </View>
-                <Text style={[styles.breakingTitle, { color: theme.text }]}>{item.post_title || item.title}</Text>
-            </View>
-         );
-     }
+    if (isBreaking) {
+      return (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+          style={[styles.breakingItem, { borderBottomColor: theme.borderColor }]}
+        >
+          <View style={styles.breakingIconRow}>
+            <View style={styles.breakingDot} />
+            <Text style={[styles.breakingMeta, { color: theme.accent }]}>BREAKING NOW</Text>
+          </View>
+          <Text style={[styles.breakingTitle, { color: theme.text }]}>{item.post_title || item.title}</Text>
+        </TouchableOpacity>
+      );
+    }
 
 
 
-     // Standard News Card for everything else
-     return (
+    // Standard News Card for everything else
+    return (
+      <View style={{ paddingHorizontal: 16 }}>
         <NewsCard
-            title={item.post_title || item.title}
-            image={item.image}
-            category={item.category || 'News'}
-            author={item.posted_by || item.author}
-            date={item.post_date || item.date}
-            shareUrl={item.share_url}
-            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+          title={item.post_title || item.title}
+          image={item.image}
+          category={item.category || 'News'}
+          author={item.posted_by || item.author}
+          date={item.post_date || item.date}
+          shareUrl={item.share_url}
+          onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
         />
-     );
+      </View>
+    );
   }, [isBreaking, type, theme, router]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-      
+
       {/* Rich White Header */}
       <View style={[styles.header, { backgroundColor: theme.headerBg, borderBottomColor: theme.borderColor }]}>
         <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Ionicons name="arrow-back" size={24} color={theme.text} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="search" size={22} color={theme.text} />
             </TouchableOpacity>
-            
-            <View style={styles.headerRight}>
-                <TouchableOpacity style={styles.iconBtn}>
-                    <Ionicons name="search" size={22} color={theme.text} />
-                </TouchableOpacity>
-            </View>
-        </View>
-        
-        <View style={styles.headerTitleRow}>
-            {/* User requested full show, less bold */}
-            <Text style={[styles.headerTitle, { color: theme.text }]}>
-                {title}
-            </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.tabIconDefault }]}>
-                {new Date().toDateString().toUpperCase()} • DAILY UPDATES
-            </Text>
+          </View>
         </View>
 
-        
+        <View style={styles.headerTitleRow}>
+          {/* User requested full show, less bold */}
+          <Text style={[styles.headerTitle, { color: theme.text }]}>
+            {title}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: theme.tabIconDefault }]}>
+            {new Date().toDateString().toUpperCase()} • DAILY UPDATES
+          </Text>
+        </View>
+
+
       </View>
 
       {loading && newsData.length === 0 ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={theme.text} />
-          </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={theme.text} />
+        </View>
       ) : (
-          <FlatList
-            data={newsData}
-            renderItem={renderItem}
-            ListHeaderComponent={renderHeader}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={[styles.listContent, !isBreaking && { paddingTop: 0 }]}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-            onEndReached={loadMore}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="small" color={theme.text} style={{ padding: 20 }} /> : null}
-            
-            // Performance Props
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={true}
-          />
+        <FlatList
+          data={newsData}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={[styles.listContent, !isBreaking && { paddingTop: 0 }]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={loading && page > 1 ? <ActivityIndicator size="small" color={theme.text} style={{ padding: 20 }} /> : null}
+
+          // Performance Props
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+        />
       )}
     </View>
   );
@@ -251,9 +314,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerRight: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   iconBtn: {
     width: 40,

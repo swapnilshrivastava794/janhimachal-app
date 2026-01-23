@@ -1,5 +1,4 @@
 const constant = {
-  // appBaseUrl: "https://mriigg.com",
   appBaseUrl: "https://www.janhimachal.com",
   // appBaseUrl: "http://192.168.29.97:8000",
   razorpayKeyId: "rzp_live_S3LMixUxynuMXm", // LIVE KEY

@@ -25,31 +25,31 @@ export default function PaymentSuccessScreen() {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
             <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
-            
+
             <View style={styles.content}>
                 <View style={styles.iconCircle}>
-                     <Ionicons name="checkmark-sharp" size={60} color="#fff" />
+                    <Ionicons name="checkmark-sharp" size={60} color="#fff" />
                 </View>
 
                 <Text style={[styles.title, { color: theme.text }]}>Payment Successful!</Text>
                 <Text style={[styles.subtitle, { color: theme.placeholderText }]}>
-                    Your registration for <Text style={{fontWeight:'700', color: theme.primary}}>Nanhe Patrakar</Text> is complete.
+                    Your registration for <Text style={{ fontWeight: '700', color: theme.primary }}>Nanhe Patrakar</Text> is complete.
                 </Text>
 
                 <View style={[styles.receiptCard, { backgroundColor: theme.background, borderColor: theme.borderColor }]}>
                     <View style={styles.row}>
-                        <Text style={[styles.label, {color: theme.placeholderText}]}>Transaction ID</Text>
-                        <Text style={[styles.value, {color: theme.text}]}>#TXN123456789</Text>
+                        <Text style={[styles.label, { color: theme.placeholderText }]}>Transaction ID</Text>
+                        <Text style={[styles.value, { color: theme.text }]}>#TXN123456789</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.row}>
-                        <Text style={[styles.label, {color: theme.placeholderText}]}>Amount Paid</Text>
-                        <Text style={[styles.value, {color: theme.text, fontSize: 18, fontWeight: '700'}]}>₹599.00</Text>
+                        <Text style={[styles.label, { color: theme.placeholderText }]}>Amount Paid</Text>
+                        <Text style={[styles.value, { color: theme.text, fontSize: 18, fontWeight: '700' }]}>₹250.00</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.row}>
-                        <Text style={[styles.label, {color: theme.placeholderText}]}>Date</Text>
-                        <Text style={[styles.value, {color: theme.text}]}>{new Date().toLocaleDateString()}</Text>
+                        <Text style={[styles.label, { color: theme.placeholderText }]}>Date</Text>
+                        <Text style={[styles.value, { color: theme.text }]}>{new Date().toLocaleDateString()}</Text>
                     </View>
                 </View>
 
@@ -59,11 +59,11 @@ export default function PaymentSuccessScreen() {
             </View>
 
             <View style={styles.footer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.homeButton, { backgroundColor: theme.primary }]}
                     onPress={() => {
                         // Reset navigation stack to home
-                         router.push('/(tabs)' as any);
+                        router.push('/(tabs)' as any);
                     }}
                 >
                     <Text style={styles.buttonText}>Go to Home</Text>
