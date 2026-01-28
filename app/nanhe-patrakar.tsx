@@ -145,7 +145,7 @@ export default function NanhePatrakarScreen() {
                     <View style={[styles.premiumFeeCard, { backgroundColor: theme.primary }]}>
                         <View style={styles.feeHeaderRow}>
                             <Text style={[styles.feeLabel, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>सहभागिता शुल्क</Text>
-                            <Text style={[styles.feeValue, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹250</Text>
+                            <Text style={[styles.feeValue, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹369</Text>
                         </View>
                         <View style={[styles.feeDivider, { backgroundColor: colorScheme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }]} />
                         <View style={styles.benefitRow}>

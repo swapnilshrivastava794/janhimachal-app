@@ -702,7 +702,7 @@ export default function NanhePatrakarRegistrationScreen() {
           <View style={[styles.feeCard, { backgroundColor: theme.primary }]}>
             <View style={styles.feeTop}>
               <Text style={[styles.feeTitle, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>सहभागिता शुल्क</Text>
-              <Text style={[styles.feePrice, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹250</Text>
+              <Text style={[styles.feePrice, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>₹369</Text>
             </View>
             <Text style={[styles.feeNote, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>शामिल है: संपादकीय समीक्षा, डिजिटल प्रमाण-पत्र और प्रकाशन अवसर</Text>
           </View>

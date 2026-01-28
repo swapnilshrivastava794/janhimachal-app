@@ -44,7 +44,7 @@ export default function PaymentSuccessScreen() {
                     <View style={styles.divider} />
                     <View style={styles.row}>
                         <Text style={[styles.label, { color: theme.placeholderText }]}>Amount Paid</Text>
-                        <Text style={[styles.value, { color: theme.text, fontSize: 18, fontWeight: '700' }]}>₹250.00</Text>
+                        <Text style={[styles.value, { color: theme.text, fontSize: 18, fontWeight: '700' }]}>₹369.00</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.row}>

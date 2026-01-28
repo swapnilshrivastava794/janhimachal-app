@@ -61,7 +61,7 @@ const NanhePatrakarJoinTeaser = () => {
             >
               <View style={styles.btnContent}>
                 <Text style={styles.teaserBtnText}>अभी रजिस्ट्रेशन करें</Text>
-                <Text style={styles.teaserBtnSub}>मात्र ₹250 (एक बार के लिए)</Text>
+                <Text style={styles.teaserBtnSub}>मात्र ₹369 (एक बार के लिए)</Text>
               </View>
               <View style={styles.btnIconCircle}>
                 <Ionicons name="arrow-forward" size={20} color={theme.primary} />

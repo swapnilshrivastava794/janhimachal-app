@@ -177,7 +177,7 @@ export default function NanhePatrakarHubScreen() {
                                 router.push('/nanhe-patrakar-registration' as any);
                             }
                         }}
-                        style={[styles.joinHeaderBtn, { backgroundColor: theme.primary }]}
+                        style={[styles.joinHeaderBtn, { backgroundColor: '#E31E24' }]}
                     >
                         <Text style={styles.joinHeaderBtnText}>Join Now</Text>
                     </TouchableOpacity>
@@ -202,7 +202,7 @@ export default function NanhePatrakarHubScreen() {
                         style={styles.joinBanner}
                     >
                         <LinearGradient
-                            colors={[theme.primary, '#B71C1C']}
+                            colors={['#E31E24', '#B71C1C']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.joinBannerGradient}
@@ -229,15 +229,21 @@ export default function NanhePatrakarHubScreen() {
                                     onPress={() => router.push({ pathname: '/nanhe-patrakar-child-profile', params: { id: child.id } } as any)}
                                 >
                                     <LinearGradient
-                                        colors={['#FFD700', '#FFA500']}
+                                        colors={['#E31E24', '#8E1418']}
                                         style={styles.storyRing}
                                     >
-                                        <Image
-                                            source={{ uri: child.photo ? `${constant.appBaseUrl}${child.photo}` : 'https://avatar.iran.liara.run/public/boy' }}
-                                            style={styles.storyAvatar}
-                                            onLoad={() => console.log('✅ Image loaded:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
-                                            onError={(e) => console.error('❌ Image load error:', e.nativeEvent.error, 'URL:', child.photo ? `${constant.appBaseUrl}${child.photo}` : 'default')}
-                                        />
+                                        {child.photo ? (
+                                            <Image
+                                                source={{ uri: child.photo.startsWith('http') ? child.photo : `${constant.appBaseUrl}${child.photo}` }}
+                                                style={styles.storyAvatar}
+                                                onLoad={() => console.log('✅ Image loaded:', child.photo)}
+                                                onError={(e) => console.error('❌ Image load error:', e.nativeEvent.error, 'URL:', child.photo)}
+                                            />
+                                        ) : (
+                                            <View style={[styles.storyAvatar, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                                                <Ionicons name="person" size={28} color="#999" />
+                                            </View>
+                                        )}
                                     </LinearGradient>
                                     <Text style={[styles.storyName, { color: theme.text }]} numberOfLines={1}>
                                         {child.name.split(' ')[0]}
@@ -256,7 +262,7 @@ export default function NanhePatrakarHubScreen() {
                             FEATURED_STUDENTS.map((s) => (
                                 <TouchableOpacity key={s.id} style={styles.storyCircleWrapper}>
                                     <LinearGradient
-                                        colors={['#FFD700', '#FFA500']}
+                                        colors={['#E31E24', '#8E1418']}
                                         style={styles.storyRing}
                                     >
                                         <Image source={{ uri: s.avatar }} style={styles.storyAvatar} />
