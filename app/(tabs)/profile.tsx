@@ -50,6 +50,7 @@ export default function ProfileScreen() {
     const [showDistrictModal, setShowDistrictModal] = useState(false);
     const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     // Check if child is registered as nanhe_patrakar
     const isNanhePatrakar = (!!user && user?.user_type === 'nanhe_patrakar');
@@ -168,6 +169,7 @@ export default function ProfileScreen() {
             Alert.alert('त्रुटि', error.message || 'अपडेट विफल रहा');
         } finally {
             setIsUpdating(false);
+            setIsEditing(false); // Disable edit mode on success
         }
     };
 
@@ -309,17 +311,26 @@ export default function ProfileScreen() {
 
                 {/* --- Form Section --- */}
                 <View style={styles.formSection}>
-                    <Text style={[styles.sectionLabel, { color: theme.text }]}>अकाउंट जानकारी</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                        <Text style={[styles.sectionLabel, { color: theme.text, marginBottom: 0 }]}>अकाउंट जानकारी</Text>
+                        <TouchableOpacity
+                            onPress={() => setIsEditing(!isEditing)}
+                            style={{ padding: 5 }}
+                        >
+                            <Ionicons name={isEditing ? "close-circle" : "create-outline"} size={24} color={theme.primary} />
+                        </TouchableOpacity>
+                    </View>
 
                     <View style={styles.rowInputs}>
                         <View style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.inputFloatingLabel}>First Name</Text>
                                 <TextInput
-                                    style={[styles.input, { color: '#1A1A1A' }]}
+                                    style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                     value={firstName}
                                     onChangeText={setFirstName}
                                     placeholder="First Name"
+                                    editable={isEditing}
                                 />
                             </View>
                         </View>
@@ -327,10 +338,11 @@ export default function ProfileScreen() {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.inputFloatingLabel}>Last Name</Text>
                                 <TextInput
-                                    style={[styles.input, { color: '#1A1A1A' }]}
+                                    style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                     value={lastName}
                                     onChangeText={setLastName}
                                     placeholder="Last Name"
+                                    editable={isEditing}
                                 />
                             </View>
                         </View>
@@ -341,10 +353,11 @@ export default function ProfileScreen() {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.inputFloatingLabel}>Username</Text>
                             <TextInput
-                                style={[styles.input, { color: '#1A1A1A' }]}
+                                style={[styles.input, { color: '#666', backgroundColor: '#f5f5f5' }]}
                                 value={username}
                                 onChangeText={setUsername}
                                 placeholder="Username"
+                                editable={false}
                             />
                         </View>
                     </View>
@@ -354,11 +367,12 @@ export default function ProfileScreen() {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.inputFloatingLabel}>इमेल</Text>
                             <TextInput
-                                style={[styles.input, { color: '#1A1A1A' }]}
+                                style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                 value={email}
                                 onChangeText={setEmail}
                                 placeholder="Email"
                                 keyboardType="email-address"
+                                editable={isEditing}
                             />
                         </View>
                     </View>
@@ -370,10 +384,11 @@ export default function ProfileScreen() {
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.inputFloatingLabel}>फ़ोन नंबर</Text>
                                     <TextInput
-                                        style={[styles.input, { color: '#1A1A1A' }]}
+                                        style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                         value={phone}
                                         onChangeText={setPhone}
                                         keyboardType="phone-pad"
+                                        editable={isEditing}
                                     />
                                 </View>
                             </View>
@@ -383,16 +398,18 @@ export default function ProfileScreen() {
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputFloatingLabel}>शहर (City)</Text>
                                         <TextInput
-                                            style={[styles.input, { color: '#1A1A1A' }]}
+                                            style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                             value={city}
                                             onChangeText={setCity}
                                             placeholder="City"
+                                            editable={isEditing}
                                         />
                                     </View>
                                 </View>
                                 <TouchableOpacity
                                     style={[styles.inputGroup, { flex: 1, backgroundColor: '#fff', borderColor: '#eee' }]}
-                                    onPress={() => setShowDistrictModal(true)}
+                                    onPress={() => isEditing && setShowDistrictModal(true)}
+                                    activeOpacity={isEditing ? 0.7 : 1}
                                 >
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputFloatingLabel}>जिला (District)</Text>
@@ -407,7 +424,11 @@ export default function ProfileScreen() {
                             <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', alignItems: 'flex-start', paddingVertical: 15 }]}>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.inputFloatingLabel}>पहचान पत्र (ID Proof)</Text>
-                                    <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+                                    <TouchableOpacity
+                                        style={[styles.uploadBox, !isEditing && { backgroundColor: '#f5f5f5' }]}
+                                        onPress={isEditing ? pickImage : undefined}
+                                        activeOpacity={isEditing ? 0.7 : 1}
+                                    >
                                         {idProofImage ? (
                                             <Image source={{ uri: idProofImage }} style={styles.uploadedImgPreview} />
                                         ) : (
@@ -422,19 +443,21 @@ export default function ProfileScreen() {
                         </>
                     )}
 
-                    <TouchableOpacity
-                        style={[styles.updateBtn, isUpdating && { opacity: 0.7 }]}
-                        onPress={handleUpdate}
-                        disabled={isUpdating}
-                    >
-                        <View style={[styles.btnGradient, { backgroundColor: '#1A1A1A' }]}>
-                            {isUpdating ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.updateBtnText}>प्रोफ़ाइल अपडेट करें</Text>
-                            )}
-                        </View>
-                    </TouchableOpacity>
+                    {isEditing && (
+                        <TouchableOpacity
+                            style={[styles.updateBtn, isUpdating && { opacity: 0.7 }]}
+                            onPress={handleUpdate}
+                            disabled={isUpdating}
+                        >
+                            <View style={[styles.btnGradient, { backgroundColor: '#1A1A1A' }]}>
+                                {isUpdating ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.updateBtnText}>प्रोफ़ाइल अपडेट करें</Text>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* --- District Modal --- */}

@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState } from 'react';
 
 type CategoryContextType = {
   selectedSubcategoryId: number | null;
-  setSelectedSubcategoryId: (id: number) => void;
+  setSelectedSubcategoryId: (id: number | null) => void;
   selectedCategoryName: string | null;
-  setSelectedCategoryName: (name: string) => void;
+  setSelectedCategoryName: (name: string | null) => void;
   categories: any[];
   setCategories: (categories: any[]) => void;
   nextSubCategory: () => void;

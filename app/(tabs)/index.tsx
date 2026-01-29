@@ -6,6 +6,7 @@ import { ToastNotification } from '@/components/ToastNotification';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useCategory } from '@/context/CategoryContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,11 +16,20 @@ import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionMa
 
 const { width } = Dimensions.get('window');
 
+
+
+
+import { useTabBar } from '@/context/TabBarContext';
+
 export default function HomeScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
+
+  const { hideTabBar, showTabBar } = useTabBar();
+  const lastScrollY = useRef(0);
   const { user, parentProfile, refreshProfile } = useAuth();
+  const { setSelectedSubcategoryId, setSelectedCategoryName } = useCategory(); // Get context methods
 
   const [topStories, setTopStories] = useState<any[]>([]);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
@@ -55,16 +65,28 @@ export default function HomeScreen() {
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
 
+
+
+  // Use ref to access current user in useFocusEffect without triggering it on user change
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Refresh profile data AND News EVERY TIME Home screen comes into focus
   useFocusEffect(
     useCallback(() => {
+      // Reset Category Selection ONLY when Home is focused
+      setSelectedSubcategoryId(null);
+      setSelectedCategoryName(null);
+
       // Refresh Profile
-      if (user) {
+      if (userRef.current) {
         refreshProfile();
       }
       // Refresh News (Silent refresh without skeleton)
       fetchData(false);
-    }, [user])
+    }, [])
   );
 
   // AppState listener: Detect when app comes back from background
@@ -722,6 +744,24 @@ export default function HomeScreen() {
           )}
           ListHeaderComponent={renderHeader}
           ListFooterComponent={renderFooter}
+          onScroll={({ nativeEvent }) => {
+            const currentOffset = nativeEvent.contentOffset.y;
+            const direction = currentOffset > 0 && currentOffset > lastScrollY.current ? 'down' : 'up';
+
+            // Only trigger if significant scroll and not at the very top (bounce)
+            if (Math.abs(currentOffset - lastScrollY.current) > 10) {
+              if (direction === 'down' && currentOffset > 100) {
+                hideTabBar();
+              } else {
+                showTabBar();
+              }
+              lastScrollY.current = currentOffset;
+            }
+          }}
+          onMomentumScrollEnd={() => {
+            showTabBar(); // Show tab bar when scrolling stops
+          }}
+          contentContainerStyle={{ paddingBottom: 80 }} // Add padding for absolute tab bar
           onEndReached={() => {
             if (hasMoreTopStories && !isLoadingMore) {
               loadMoreTopStories();
@@ -740,9 +780,6 @@ export default function HomeScreen() {
           initialNumToRender={5}
           maxToRenderPerBatch={5}
           windowSize={5}
-          onMomentumScrollEnd={({ nativeEvent }) => {
-            // nextSubCategory auto-switch logic removed for clean Home feed
-          }}
         />
       )}
 

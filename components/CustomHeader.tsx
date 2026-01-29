@@ -54,9 +54,6 @@ export function CustomHeader() {
       const res = await getCategories();
       const data = res.data;
       setCategories(data);
-      if (data && data.length > 0 && !selectedCategoryName) {
-        setSelectedCategoryName(data[0].cat_name);
-      }
     } catch (error) {
       console.log('Error fetching categories:', error);
     }

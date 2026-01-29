@@ -1,6 +1,6 @@
 const constant = {
   appBaseUrl: "https://www.janhimachal.com",
-  // appBaseUrl: "http://192.168.29.97:8000",
+  // appBaseUrl: "http://192.168.100.18:8000",
   razorpayKeyId: "rzp_live_S3LMixUxynuMXm", // LIVE KEY
 };
 
