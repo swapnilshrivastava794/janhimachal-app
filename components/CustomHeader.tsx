@@ -101,13 +101,13 @@ export function CustomHeader() {
   const activeSubcategories = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+    <View style={[styles.container, { backgroundColor: theme.headerBg }]}>
       <SafeAreaView>
         {/* Top Navbar - Sharp & Bold */}
-        <View style={[styles.topBar, { borderBottomColor: isDark ? '#1a1a1a' : '#f0f0f0' }]}>
+        <View style={[styles.topBar, { borderBottomColor: theme.borderColor }]}>
           {/* Left: Highlighted Date */}
           <View style={styles.sideBlock}>
-            <Text style={[styles.topDateText, { color: isDark ? '#fff' : '#111' }]}>{displayDate}</Text>
+            <Text style={[styles.topDateText, { color: theme.text }]}>{displayDate}</Text>
             <WeatherWidget />
           </View>
 
@@ -123,13 +123,13 @@ export function CustomHeader() {
           {/* Right: Sharp Icons */}
           <View style={[styles.sideBlock, { alignItems: 'flex-end' }]}>
             <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/search')}>
-              <Ionicons name="search" size={24} color={isDark ? '#fff' : '#111'} />
+              <Ionicons name="search" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Category Navigation - Solid Line Design */}
-        <View style={[styles.navSection, { borderBottomColor: isDark ? '#1a1a1a' : '#eeeeee' }]}>
+        <View style={[styles.navSection, { borderBottomColor: theme.borderColor }]}>
           <ScrollView
             ref={categoryScrollRef}
             horizontal
@@ -147,12 +147,12 @@ export function CustomHeader() {
                 >
                   <Text style={[
                     styles.categoryText,
-                    { color: isActive ? (isDark ? '#fff' : '#000') : (isDark ? '#999' : '#000') }, // Maximum darkness for inactive text
+                    { color: isActive ? theme.tint : theme.tabIconDefault },
                     isActive && { fontWeight: '900' }
                   ]}>
                     {cat.cat_name.toUpperCase()}
                   </Text>
-                  {isActive && <View style={[styles.activeBar, { backgroundColor: isDark ? '#fff' : '#000' }]} />}
+                  {isActive && <View style={[styles.activeBar, { backgroundColor: theme.tint }]} />}
                 </TouchableOpacity>
               );
             })}
@@ -179,7 +179,7 @@ export function CustomHeader() {
                   >
                     <Text style={[
                       styles.subcategoryText,
-                      { color: isSubActive ? (isDark ? '#fff' : '#000') : (isDark ? '#111' : '#222') }, // Darker subcategories
+                      { color: isSubActive ? theme.tint : theme.tabIconDefault },
                       isSubActive && { fontWeight: '900' }
                     ]}>
                       {sub.subcat_name.toUpperCase()}
@@ -192,7 +192,7 @@ export function CustomHeader() {
         )}
 
         {/* Ticker at the bottom with a solid divider */}
-        <View style={[styles.tickerWrapper, { borderTopColor: isDark ? '#222' : '#ddd' }]}>
+        <View style={[styles.tickerWrapper, { borderTopColor: theme.borderColor }]}>
           <BreakingNewsTicker />
         </View>
       </SafeAreaView>

@@ -8,10 +8,19 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { CustomHeader } from '@/components/CustomHeader';
 import { CategoryProvider } from '@/context/CategoryContext';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+      NavigationBar.setVisibilityAsync('hidden');
+    }
+  }, []);
 
   return (
     <CategoryProvider>
@@ -27,6 +36,8 @@ export default function TabLayout() {
             borderTopColor: 'rgba(0,0,0,0.1)',
             elevation: 4,
             paddingTop: 5,
+            height: Platform.OS === 'android' ? 70 : 80,
+            paddingBottom: Platform.OS === 'android' ? 10 : 30,
           },
           tabBarLabelStyle: {
             fontSize: 10,

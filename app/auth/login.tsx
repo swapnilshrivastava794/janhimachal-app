@@ -56,7 +56,7 @@ export default function LoginScreen() {
                     <Ionicons name="person-outline" size={20} color={theme.placeholderText} style={styles.inputIcon} />
                     <TextInput 
                         style={[styles.input, { color: theme.text }]}
-                        placeholder="यूजरनेम (Username)"
+                        placeholder="Phone Number"
                         placeholderTextColor={theme.placeholderText}
                         value={email}
                         onChangeText={setEmail}

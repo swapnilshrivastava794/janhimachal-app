@@ -310,16 +310,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
                         user_type: (data.profile_exists || data.parent_profile) ? 'nanhe_patrakar' : user?.user_type
                     };
-                    // console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
-                    setUser(updatedUser);
-                    await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                    
+                    // Deep compare to prevent unnecessary re-renders
+                    if (JSON.stringify(updatedUser) !== JSON.stringify(user)) {
+                         // console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
+                         setUser(updatedUser);
+                         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                    }
                 }
 
                 // Update Parent Profile info
                 // EDITED: Relaxed condition - if parent_profile data exists, use it (even if profile_exists is false - e.g. payment pending)
                 if (data.parent_profile) {
                     // console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
-                    setParentProfile(data.parent_profile);
+                    
+                    // Only update if changed
+                    if (JSON.stringify(data.parent_profile) !== JSON.stringify(parentProfile)) {
+                         setParentProfile(data.parent_profile);
+                    }
 
                     // Ensure user_type is updated
                     if (user?.user_type !== 'nanhe_patrakar') {
@@ -327,14 +335,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const baseUser = updatedUser || user;
                         if (baseUser) {
                             const updatedWithRole = { ...baseUser, user_type: 'nanhe_patrakar' };
-                            setUser(updatedWithRole);
-                            await AsyncStorage.setItem('user', JSON.stringify(updatedWithRole));
+                            if (JSON.stringify(updatedWithRole) !== JSON.stringify(user)) {
+                                setUser(updatedWithRole);
+                                await AsyncStorage.setItem('user', JSON.stringify(updatedWithRole));
+                            }
                         }
                     }
 
                 } else {
-                    console.log('ℹ️ AuthContext: No Parent Profile exists for this user.');
-                    setParentProfile(null);
+                    // console.log('ℹ️ AuthContext: No Parent Profile exists for this user.');
+                    if (parentProfile !== null) {
+                        setParentProfile(null);
+                    }
                 }
             }
         } catch (error: any) {

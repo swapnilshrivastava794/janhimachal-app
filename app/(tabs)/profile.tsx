@@ -336,17 +336,19 @@ export default function ProfileScreen() {
                         </View>
                     </View>
 
-                    <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
-                        <Ionicons name="at-outline" size={20} color="#666" style={styles.inputIcon} />
+                    <View style={[styles.inputGroup, { backgroundColor: '#f9f9f9', borderColor: '#eee' }]}>
+                        <Ionicons name="at-outline" size={20} color="#ccc" style={styles.inputIcon} />
                         <View style={{ flex: 1 }}>
                             <Text style={styles.inputFloatingLabel}>Username</Text>
                             <TextInput
-                                style={[styles.input, { color: '#1A1A1A' }]}
+                                style={[styles.input, { color: '#888' }]}
                                 value={username}
+                                editable={false}
                                 onChangeText={setUsername}
                                 placeholder="Username"
                             />
                         </View>
+                        <Ionicons name="lock-closed" size={14} color="#ccc" />
                     </View>
 
                     <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
