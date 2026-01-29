@@ -275,8 +275,16 @@ export default function HomeScreen() {
           setTopStories(prev => {
             const existingIds = new Set(prev.map(item => item.id));
             const filteredNewItems = newItems.filter((item: any) => !existingIds.has(item.id));
+            
+            if (filteredNewItems.length === 0) {
+              // If all items were duplicates, we've likely hit the end or end of unique content
+              setHasMoreTopStories(false);
+              return prev;
+            }
+
             return [...prev, ...filteredNewItems];
           });
+          
           setTopStoriesPage(nextPage);
 
           if (nextPage >= MAX_TOP_STORIES_PAGE) {

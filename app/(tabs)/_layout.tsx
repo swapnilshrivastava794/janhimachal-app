@@ -8,7 +8,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { CustomHeader } from '@/components/CustomHeader';
 import { CategoryProvider, useCategory } from '@/context/CategoryContext';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+
+import * as NavigationBar from 'expo-navigation-bar';
 
 import { TabBarProvider, useTabBar } from '@/context/TabBarContext';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
@@ -22,6 +24,13 @@ const AnimatedTabBar = (props: any) => {
       transform: [{ translateY: tabBarTranslateY.value }],
     };
   });
+
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+      NavigationBar.setVisibilityAsync('hidden');
+    }
+  }, []);
 
   return (
     <Animated.View style={[{ position: 'absolute', bottom: 0, left: 0, right: 0, elevation: 4, zIndex: 100 }, animatedStyle]}>
