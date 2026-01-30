@@ -1,3 +1,4 @@
+import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -6,7 +7,7 @@ import Constants from 'expo-constants';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import React from 'react';
-import { Dimensions, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Linking, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
@@ -104,7 +105,10 @@ export default function NanhePatrakarScreen() {
                             <TouchableOpacity
                                 style={[styles.mainButton, { backgroundColor: theme.primary }]}
                                 activeOpacity={0.8}
-                                onPress={() => router.push('/nanhe-patrakar-registration' as any)}
+                                onPress={() => {
+                                    // router.push('/nanhe-patrakar-registration' as any)
+                                    Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                }}
                             >
                                 <Text style={[styles.mainButtonText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>रजिस्ट्रेशन के लिए आगे बढ़ें</Text>
                                 <Ionicons name="arrow-forward" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />

@@ -17,6 +17,7 @@ import {
     Alert,
     Dimensions,
     Image,
+    Linking,
     Platform,
     ScrollView,
     Share,
@@ -66,7 +67,7 @@ export default function NanhePatrakarPortfolioScreen() {
 
     const generateCertificatePDF = async () => {
         if (!childProfile) return;
-        
+
         try {
             const htmlContent = `
                 <!DOCTYPE html>
@@ -123,9 +124,9 @@ export default function NanhePatrakarPortfolioScreen() {
                 </body>
                 </html>
             `;
-            
+
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
-            
+
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
@@ -150,9 +151,9 @@ export default function NanhePatrakarPortfolioScreen() {
                 setChildProfile(profile);
 
                 // Auto-set isPaid if status from server is already completed
-                if (profile.payment_status === 'PAYMENT_COMPLETED' || 
+                if (profile.payment_status === 'PAYMENT_COMPLETED' ||
                     profile.status === 'PAYMENT_COMPLETED' ||
-                    profile.payment_status === 'SUCCESS' || 
+                    profile.payment_status === 'SUCCESS' ||
                     profile.is_paid === true ||
                     parentProfile?.status === 'PAYMENT_COMPLETED') {
                     setIsPaid(true);
@@ -225,7 +226,7 @@ export default function NanhePatrakarPortfolioScreen() {
                     razorpay_payment_id: data.razorpay_payment_id,
                     razorpay_signature: data.razorpay_signature
                 };
-                
+
                 const verifyRes = await verifyRazorpayPayment(verifyPayload);
 
                 if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
@@ -279,7 +280,7 @@ export default function NanhePatrakarPortfolioScreen() {
             <View style={[styles.container, { backgroundColor: theme.background, paddingTop: STATUSBAR_HEIGHT }]}>
                 <Stack.Screen options={{ headerShown: false }} />
                 <StatusBar barStyle={colorScheme === 'dark' ? "light-content" : "dark-content"} backgroundColor={theme.background} />
-                
+
                 <View style={[styles.header, { borderBottomColor: theme.borderColor }]}>
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                         <Ionicons name="chevron-back" size={28} color={theme.text} />
@@ -287,14 +288,14 @@ export default function NanhePatrakarPortfolioScreen() {
                     <Text style={[styles.headerTitle, { color: theme.text }]}>Portfolio & Identity</Text>
                     <View style={{ width: 28 }} />
                 </View>
-                
+
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     <PortfolioSkeleton />
                 </ScrollView>
             </View>
         );
     }
-    
+
 
 
     if (!user) {
@@ -317,7 +318,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         <Text style={[styles.authDesc, { color: theme.text }]}>
                             अपना पोर्टफोलियो और प्रमाण पत्र देखने के लिए कृपया लॉगिन करें।
                         </Text>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.authLoginBtn, { backgroundColor: theme.primary }]}
                             onPress={() => router.push('/auth/login' as any)}
                         >
@@ -349,7 +350,7 @@ export default function NanhePatrakarPortfolioScreen() {
 
                 <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
                     {/* Marketing Preview for Unpaid Users - Centered */}
-                    <View style={{  marginBottom: 40,  backgroundColor: '#FFFDF5', borderRadius: 16, borderWidth: 1, borderColor: '#FFEEBA', overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 }}>
+                    <View style={{ marginBottom: 40, backgroundColor: '#FFFDF5', borderRadius: 16, borderWidth: 1, borderColor: '#FFEEBA', overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 }}>
                         {/* Urgency Badge */}
                         <View style={{ backgroundColor: '#FF8C00', paddingVertical: 6, alignItems: 'center' }}>
                             <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 }}>
@@ -399,8 +400,11 @@ export default function NanhePatrakarPortfolioScreen() {
                                 </View>
                             </View>
 
-                            <TouchableOpacity 
-                                onPress={handlePayment}
+                            <TouchableOpacity
+                                onPress={() => {
+                                    // handlePayment()
+                                    Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                }}
                                 style={{ backgroundColor: '#856404', paddingVertical: 14, borderRadius: 12, alignItems: 'center', elevation: 4 }}
                             >
                                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>भुगतान करें और अनलॉक करें</Text>
@@ -428,7 +432,7 @@ export default function NanhePatrakarPortfolioScreen() {
             <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
                 <ActivityIndicator size="large" color={theme.primary} />
                 <Text style={{ marginTop: 10, color: theme.text }}>प्रोफ़ाइल डेटा लोड हो रहा है...</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => fetchPortfolioData()}
                     style={{ marginTop: 20, padding: 12, backgroundColor: theme.primary + '15', borderRadius: 10 }}
                 >
@@ -438,21 +442,7 @@ export default function NanhePatrakarPortfolioScreen() {
         );
     }
 
-    // Standard loading check
-    if (!childProfile) {
-        return (
-            <View style={[styles.container, { backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={theme.primary} />
-                <Text style={{ marginTop: 10, color: theme.text }}>प्रोफ़ाइल डेटा लोड हो रहा है...</Text>
-                <TouchableOpacity 
-                    onPress={() => fetchPortfolioData()}
-                    style={{ marginTop: 20, padding: 12, backgroundColor: theme.primary + '15', borderRadius: 10 }}
-                >
-                    <Text style={{ color: theme.primary, fontWeight: '700' }}>पुनः प्रयास करें</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
+
 
     const childPhoto = childProfile.photo ? (childProfile.photo.startsWith('http') ? childProfile.photo : `${constant.appBaseUrl}${childProfile.photo}`) : `https://avatar.iran.liara.run/public/boy?username=${childProfile.name}`;
 
@@ -466,7 +456,7 @@ export default function NanhePatrakarPortfolioScreen() {
                     <Ionicons name="chevron-back" size={28} color={theme.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: theme.text }]}>Portfolio & Identity</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.settingsButton}
                     onPress={async () => {
                         try {
@@ -495,7 +485,7 @@ export default function NanhePatrakarPortfolioScreen() {
                         <View style={styles.profileInfo}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <Text style={[styles.nameText, { color: theme.text, flex: 1 }]}>{childProfile.name}</Text>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     onPress={() => router.push({
                                         pathname: '/nanhe-patrakar-edit-child',
                                         params: { profileData: JSON.stringify(childProfile) }
@@ -541,7 +531,7 @@ export default function NanhePatrakarPortfolioScreen() {
                 </View>
 
                 <Text style={[styles.sectionHeading, { color: theme.text }]}>नन्हा पत्रकार प्रमाण-पत्र</Text>
-                
+
                 {/* Certificate Not Ready Message */}
                 {!certificateStatus.ready && (
                     <View style={[styles.certificateLockedCard, { backgroundColor: theme.primary + '08', borderColor: theme.borderColor }]}>
@@ -556,7 +546,7 @@ export default function NanhePatrakarPortfolioScreen() {
                                 </Text>
                             </View>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => router.push('/nanhe-patrakar-submission' as any)}
                             style={[styles.submitNowBtn, { backgroundColor: theme.primary }]}
                         >
@@ -568,52 +558,52 @@ export default function NanhePatrakarPortfolioScreen() {
 
                 {/* Certificate - Show only if ready */}
                 {certificateStatus.ready && (
-                <TouchableOpacity activeOpacity={0.9} style={styles.certificateWrapper}>
-                    <LinearGradient colors={['#fdfcfb', '#e2d1c3']} style={styles.certificateContainer}>
-                        <View style={styles.certBorder}>
-                            <View style={styles.certContent}>
-                                <View style={styles.certHeader}>
-                                    <Ionicons name="ribbon" size={40} color="#D4AF37" />
-                                    <Text style={styles.certOrgName}>JAN HIMACHAL</Text>
-                                    <View style={styles.certLine} />
-                                    <Text style={styles.certSubHeader}>नन्हा पत्रकार कार्यक्रम</Text>
-                                </View>
-                                <Text style={styles.certTitle}>प्रमाण-पत्र</Text>
-                                <Text style={styles.certBody}>यह प्रमाणित किया जाता है कि</Text>
-                                <Text style={styles.certUserName}>{childProfile.name.toUpperCase()}</Text>
-                                <Text style={styles.certBodyText}>
-                                    ने जन हिमाचल के 'नन्हे पत्रकार' कार्यक्रम में सफलतापूर्वक अपना पंजीकरण कराया है और उन्हें एक सक्रिय बाल पत्रकार के रूप में मान्यता दी जाती है।
-                                </Text>
-                                <View style={styles.certFooter}>
-                                    <View style={styles.signBox}>
-                                        <Text style={styles.signText}>संपादक</Text>
-                                        <View style={styles.signDetailLine} />
-                                        <Text style={styles.signSubText}>जन हिमाचल</Text>
+                    <TouchableOpacity activeOpacity={0.9} style={styles.certificateWrapper}>
+                        <LinearGradient colors={['#fdfcfb', '#e2d1c3']} style={styles.certificateContainer}>
+                            <View style={styles.certBorder}>
+                                <View style={styles.certContent}>
+                                    <View style={styles.certHeader}>
+                                        <Ionicons name="ribbon" size={40} color="#D4AF37" />
+                                        <Text style={styles.certOrgName}>JAN HIMACHAL</Text>
+                                        <View style={styles.certLine} />
+                                        <Text style={styles.certSubHeader}>नन्हा पत्रकार कार्यक्रम</Text>
                                     </View>
-                                    <View style={styles.certBadge}>
-                                        <MaterialCommunityIcons name="seal" size={50} color="#D4AF37" />
-                                    </View>
-                                    <View style={styles.signBox}>
-                                        <Text style={styles.signText}>{new Date(childProfile.created_at).toLocaleDateString()}</Text>
-                                        <View style={styles.signDetailLine} />
-                                        <Text style={styles.signSubText}>तिथी</Text>
+                                    <Text style={styles.certTitle}>प्रमाण-पत्र</Text>
+                                    <Text style={styles.certBody}>यह प्रमाणित किया जाता है कि</Text>
+                                    <Text style={styles.certUserName}>{childProfile.name.toUpperCase()}</Text>
+                                    <Text style={styles.certBodyText}>
+                                        ने जन हिमाचल के 'नन्हे पत्रकार' कार्यक्रम में सफलतापूर्वक अपना पंजीकरण कराया है और उन्हें एक सक्रिय बाल पत्रकार के रूप में मान्यता दी जाती है।
+                                    </Text>
+                                    <View style={styles.certFooter}>
+                                        <View style={styles.signBox}>
+                                            <Text style={styles.signText}>संपादक</Text>
+                                            <View style={styles.signDetailLine} />
+                                            <Text style={styles.signSubText}>जन हिमाचल</Text>
+                                        </View>
+                                        <View style={styles.certBadge}>
+                                            <MaterialCommunityIcons name="seal" size={50} color="#D4AF37" />
+                                        </View>
+                                        <View style={styles.signBox}>
+                                            <Text style={styles.signText}>{new Date(childProfile.created_at).toLocaleDateString()}</Text>
+                                            <View style={styles.signDetailLine} />
+                                            <Text style={styles.signSubText}>तिथी</Text>
+                                        </View>
                                     </View>
                                 </View>
                             </View>
-                        </View>
-                    </LinearGradient>
-                    <TouchableOpacity style={[styles.downloadBtn, { backgroundColor: theme.primary }]}
-                    onPress={generateCertificatePDF}
-                    >
-                        <Ionicons name="cloud-download-outline" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
-                        <Text style={[styles.downloadBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
+                        </LinearGradient>
+                        <TouchableOpacity style={[styles.downloadBtn, { backgroundColor: theme.primary }]}
+                            onPress={generateCertificatePDF}
+                        >
+                            <Ionicons name="cloud-download-outline" size={20} color={colorScheme === 'dark' ? '#000' : '#fff'} />
+                            <Text style={[styles.downloadBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>प्रमाण-पत्र डाउनलोड करें (PDF)</Text>
+                        </TouchableOpacity>
                     </TouchableOpacity>
-                </TouchableOpacity>
                 )}
 
                 <View style={styles.portfolioHeader}>
                     <Text style={[styles.sectionHeading, { color: theme.text, marginBottom: 0, marginTop: 40 }]}>मेरी रचनाएं (Portfolio)</Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={{ marginTop: 40 }}
                         onPress={() => router.push('/nanhe-patrakar-hub' as any)}
                     >
@@ -625,8 +615,8 @@ export default function NanhePatrakarPortfolioScreen() {
                     myStories.map((story) => {
                         const storyImg = story.media_files?.[0]?.file ? (story.media_files[0].file.startsWith('http') ? story.media_files[0].file : `${constant.appBaseUrl}${story.media_files[0].file}`) : 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=300&auto=format&fit=crop';
                         return (
-                            <TouchableOpacity 
-                                key={story.id} 
+                            <TouchableOpacity
+                                key={story.id}
                                 style={[styles.storyCard, { backgroundColor: (theme as any).card || theme.background, borderColor: theme.borderColor }]}
                                 activeOpacity={0.8}
                                 onPress={() => router.push({ pathname: '/nanhe-patrakar-reader', params: { id: story.id } } as any)}
@@ -645,12 +635,12 @@ export default function NanhePatrakarPortfolioScreen() {
                                             <Ionicons name="eye-outline" size={14} color={theme.placeholderText} />
                                             <Text style={styles.viewsText}>{story.views || 0} पाठक</Text>
                                         </View>
-                                        <LinearGradient 
+                                        <LinearGradient
                                             colors={
-                                                story.status_display === 'Approved' ? ['#4CAF50', '#45a049'] : 
-                                                story.status_display === 'Rejected' ? ['#F44336', '#D32F2F'] : 
-                                                ['#FF9800', '#F57C00']
-                                            } 
+                                                story.status_display === 'Approved' ? ['#4CAF50', '#45a049'] :
+                                                    story.status_display === 'Rejected' ? ['#F44336', '#D32F2F'] :
+                                                        ['#FF9800', '#F57C00']
+                                            }
                                             style={styles.publishedBadge}
                                         >
                                             <Text style={styles.publishedText}>

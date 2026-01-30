@@ -15,6 +15,7 @@ import {
     Dimensions,
     FlatList,
     Image,
+    Linking,
     Modal,
     ScrollView,
     StatusBar,
@@ -285,7 +286,10 @@ export default function ProfileScreen() {
                         <TouchableOpacity
                             activeOpacity={0.9}
                             style={styles.prideCard}
-                            onPress={() => router.push('/nanhe-patrakar')}
+                            onPress={() => {
+                                // router.push('/nanhe-patrakar')
+                                Linking.openURL(constant.nanhePatrakarPaymentLink);
+                            }}
                         >
                             <View style={[styles.prideGradient, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee' }]}>
                                 <View style={styles.prideTop}>
@@ -315,9 +319,17 @@ export default function ProfileScreen() {
                         <Text style={[styles.sectionLabel, { color: theme.text, marginBottom: 0 }]}>अकाउंट जानकारी</Text>
                         <TouchableOpacity
                             onPress={() => setIsEditing(!isEditing)}
-                            style={{ padding: 5 }}
+                            style={{
+                                padding: 8,
+                                backgroundColor: isEditing ? '#fee2e2' : theme.primary + '15',
+                                borderRadius: 12
+                            }}
                         >
-                            <Ionicons name={isEditing ? "close-circle" : "create-outline"} size={24} color={theme.primary} />
+                            <Ionicons
+                                name={isEditing ? "close" : "pencil"}
+                                size={20}
+                                color={isEditing ? "#ef4444" : theme.primary}
+                            />
                         </TouchableOpacity>
                     </View>
 

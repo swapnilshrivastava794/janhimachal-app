@@ -33,7 +33,7 @@ const AnimatedTabBar = (props: any) => {
   }, []);
 
   return (
-    <Animated.View style={[{ position: 'absolute', bottom: 0, left: 0, right: 0, elevation: 4, zIndex: 100 }, animatedStyle]}>
+    <Animated.View style={[{ position: 'absolute', bottom: 0, left: 0, right: 0, elevation: 8, zIndex: 100 }, animatedStyle]}>
       <BottomTabBar {...props} />
     </Animated.View>
   );
@@ -62,8 +62,9 @@ const TabsLayoutInner = () => {
         tabBarStyle: {
           backgroundColor: Colors[colorScheme ?? 'light'].background,
           borderTopColor: 'rgba(0,0,0,0.1)',
-          // elevation: 4, // handled by container
-          paddingTop: 5,
+          height: 70,
+          paddingBottom: 12,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -106,7 +107,7 @@ const TabsLayoutInner = () => {
               backgroundColor: '#a8272cff',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 30, // Raise the button
+              marginBottom: 20, // Adjusted to match new tab bar height
               elevation: 10,
               shadowColor: '#E31E24',
               shadowOffset: { width: 0, height: 5 },

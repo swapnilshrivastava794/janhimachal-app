@@ -15,6 +15,7 @@ import {
     Dimensions,
     Image,
     KeyboardAvoidingView,
+    Linking,
     Modal,
     Platform,
     ScrollView,
@@ -63,9 +64,9 @@ export default function NanhePatrakarSubmissionScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    
+
     const isPaid = parentProfile?.status === 'PAYMENT_COMPLETED';
-    
+
     // Media States
     const [images, setImages] = useState<any[]>([]); // Max 2
     const [videos, setVideos] = useState<any[]>([]); // Max 2
@@ -86,7 +87,7 @@ export default function NanhePatrakarSubmissionScreen() {
             image: 'https://janhimachal.com/static/img/logo.png',
             currency: 'INR',
             key: constant.razorpayKeyId?.trim(),
-            amount: orderData.amount, 
+            amount: orderData.amount,
             name: 'Jan Himachal',
             order_id: rzpOrderId,
             prefill: {
@@ -104,13 +105,13 @@ export default function NanhePatrakarSubmissionScreen() {
                     razorpay_payment_id: data.razorpay_payment_id,
                     razorpay_signature: data.razorpay_signature
                 };
-                
+
                 const verifyRes = await verifyRazorpayPayment(verifyPayload);
 
                 if (verifyRes.data && (verifyRes.data.payment_status === "SUCCESS" || verifyRes.data.status === "PAYMENT_COMPLETED")) {
                     Alert.alert('Success', 'भुगतान सफल रहा!');
                     setShowPaymentModal(false);
-                    await refreshProfile(); 
+                    await refreshProfile();
                     router.replace('/nanhe-patrakar-portfolio' as any);
                 } else {
                     Alert.alert('Processing', 'Payment received. Verifying status...');
@@ -276,16 +277,21 @@ export default function NanhePatrakarSubmissionScreen() {
         if (!title.trim()) { Alert.alert("शीर्षक खाली है", "कृपया खबर का शीर्षक लिखें।"); return; }
         if (!content.trim()) { Alert.alert("सामग्री खाली है", "कृपया कुछ शब्द लिखें।"); return; }
         if (!selectedTopic) { Alert.alert("विषय चुनें", "कृपया एक विषय चुनें।"); return; }
-        if (!childId) { 
+        if (!childId) {
             Alert.alert(
-                "त्रुटि", 
+                "त्रुटि",
                 "बच्चे की प्रोफाइल नहीं मिली। कृपया पहले रजिस्ट्रेशन पूरा करें।",
                 [
-                    { text: "रजिस्ट्रेशन करें", onPress: () => router.push('/nanhe-patrakar-registration' as any) },
+                    {
+                        text: "रजिस्ट्रेशन करें", onPress: () => {
+                            // router.push('/nanhe-patrakar-registration' as any)
+                            Linking.openURL(constant.nanhePatrakarPaymentLink);
+                        }
+                    },
                     { text: "बंद करें", style: "cancel" }
                 ]
-            ); 
-            return; 
+            );
+            return;
         }
 
         try {
@@ -367,12 +373,12 @@ export default function NanhePatrakarSubmissionScreen() {
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                    
+
                     <Text style={[styles.sectionLabel, { color: theme.text }]}>विषय (Topic) चुनें</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalList} contentContainerStyle={{ gap: 10, paddingRight: 40 }}>
                         {Array.isArray(topics) && topics.length > 0 ? topics.map((t) => (
-                            <TouchableOpacity 
-                                key={t.id} 
+                            <TouchableOpacity
+                                key={t.id}
                                 onPress={() => setSelectedTopic(t.id.toString())}
                                 style={[styles.chip, { backgroundColor: selectedTopic === t.id.toString() ? theme.primary : 'transparent', borderColor: theme.primary }]}
                             >
@@ -388,7 +394,7 @@ export default function NanhePatrakarSubmissionScreen() {
                     <Text style={[styles.sectionLabel, { color: theme.text, marginTop: 20 }]}>माध्यम (Type)</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalList} contentContainerStyle={{ gap: 10, paddingRight: 40 }}>
                         {CONTENT_TYPES.map((item) => (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 key={item.id}
                                 onPress={() => setSelectedType(item.id)}
                                 style={[styles.typeItem, { backgroundColor: selectedType === item.id ? theme.primary : theme.primary + '10', borderColor: theme.primary }]}
@@ -465,19 +471,20 @@ export default function NanhePatrakarSubmissionScreen() {
                         <Text style={[styles.paymentDesc, { color: theme.placeholderText }]}>
                             "नन्हे पत्रकार" बनने और अपनी खबरें भेजने के लिए पंजीकरण शुल्क का भुगतान करना अनिवार्य है।
                         </Text>
-                        
-                        <TouchableOpacity 
+
+                        <TouchableOpacity
                             style={[styles.payBtn, { backgroundColor: theme.primary }]}
                             onPress={() => {
-                                setShowPaymentModal(false);
-                                router.push('/nanhe-patrakar-portfolio' as any);
+                                // setShowPaymentModal(false);
+                                // router.push('/nanhe-patrakar-portfolio' as any);
+                                Linking.openURL(constant.nanhePatrakarPaymentLink);
                             }}
                         >
                             <Text style={[styles.payBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>पोर्टफोलियो और भुगतान पर जाएं</Text>
                             <Ionicons name="arrow-forward" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.laterBtn}
                             onPress={() => {
                                 setShowPaymentModal(false);

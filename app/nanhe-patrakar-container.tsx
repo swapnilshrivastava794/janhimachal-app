@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Linking,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -18,7 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import NanhePatrakarGuide from './nanhe-patrakar';
+import NanhePatrakarGuide from './nanhe-patrakar-guide';
 import NanhePatrakarHub from './nanhe-patrakar-hub';
 import NanhePatrakarPortfolio from './nanhe-patrakar-portfolio';
 
@@ -51,7 +52,12 @@ const NanhePatrakarJoinTeaser = () => {
           <TouchableOpacity
             style={styles.teaserBtn}
             activeOpacity={0.9}
-            onPress={() => router.push('/nanhe-patrakar-registration' as any)}
+            onPress={() => {
+              // router.push('/nanhe-patrakar-registration' as any)
+              import('../constants/constant').then(c => {
+                Linking.openURL(c.default.nanhePatrakarPaymentLink);
+              });
+            }}
           >
             <LinearGradient
               colors={['#E31E24', '#B71C1C']}
@@ -136,18 +142,18 @@ export default function NanhePatrakarContainer() {
 
   const [activeTab, setActiveTab] = useState<'hub' | 'guide' | 'portfolio' | 'add'>('hub');
 
-  const tabs = [
-    { id: 'hub', label: 'सितारे (Stars)', icon: 'planet-outline', activeIcon: 'planet' },
-    hasRegisteredChild
-      ? { id: 'add', label: 'खबर भेजें', icon: 'add-circle', activeIcon: 'add-circle' }
-      : { id: 'guide', label: 'नियम (Guide)', icon: 'book-outline', activeIcon: 'book' },
-    {
-      id: 'portfolio',
-      label: hasRegisteredChild ? 'प्रोफ़ाइल' : 'जोड़ें (Join)',
-      icon: hasRegisteredChild ? 'person-outline' : 'add-circle-outline',
-      activeIcon: hasRegisteredChild ? 'person' : 'add-circle'
-    },
-  ];
+  // const tabs = [
+  //   { id: 'hub', label: 'सितारे (Stars)', icon: 'planet-outline', activeIcon: 'planet' },
+  //   hasRegisteredChild
+  //     ? { id: 'add', label: 'खबर भेजें', icon: 'add-circle', activeIcon: 'add-circle' }
+  //     : { id: 'guide', label: 'नियम (Guide)', icon: 'book-outline', activeIcon: 'book' },
+  //   {
+  //     id: 'portfolio',
+  //     label: hasRegisteredChild ? 'प्रोफ़ाइल' : 'जोड़ें (Join)',
+  //     icon: hasRegisteredChild ? 'person-outline' : 'add-circle-outline',
+  //     activeIcon: hasRegisteredChild ? 'person' : 'add-circle'
+  //   },
+  // ];
 
   const renderContent = () => {
     switch (activeTab) {
@@ -185,7 +191,7 @@ export default function NanhePatrakarContainer() {
       </View>
 
       {/* Floating Bottom Tab Bar for Nanhe Patrakar Sub-app */}
-      <View style={[styles.tabContainer, { paddingBottom: Math.max(insets.bottom, 15) }]}>
+      {/* <View style={[styles.tabContainer, { paddingBottom: Math.max(insets.bottom, 15) }]}>
         <View style={[styles.tabBar, { backgroundColor: '#1A1A1A', borderColor: 'rgba(255,255,255,0.1)' }]}>
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -210,7 +216,7 @@ export default function NanhePatrakarContainer() {
             );
           })}
         </View>
-      </View>
+      </View> */}
     </View>
   );
 }

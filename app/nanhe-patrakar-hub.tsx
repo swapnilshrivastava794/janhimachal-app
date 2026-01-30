@@ -13,6 +13,7 @@ import {
     ActivityIndicator,
     Dimensions,
     Image,
+    Linking,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -174,7 +175,8 @@ export default function NanhePatrakarHubScreen() {
                             } else if (parentProfile) {
                                 router.push('/nanhe-patrakar-portfolio' as any);
                             } else {
-                                router.push('/nanhe-patrakar-registration' as any);
+                                // router.push('/nanhe-patrakar-registration' as any);
+                                Linking.openURL(constant.nanhePatrakarPaymentLink);
                             }
                         }}
                         style={[styles.joinHeaderBtn, { backgroundColor: '#E31E24' }]}
@@ -190,15 +192,7 @@ export default function NanhePatrakarHubScreen() {
                 {!hasRegisteredChild && (
                     <TouchableOpacity
                         activeOpacity={0.9}
-                        onPress={() => {
-                            if (!user) {
-                                router.push('/auth/login' as any);
-                            } else if (parentProfile) {
-                                router.push('/nanhe-patrakar-portfolio' as any);
-                            } else {
-                                router.push('/nanhe-patrakar-registration' as any);
-                            }
-                        }}
+                        onPress={() => router.push('/nanhe-patrakar-guide' as any)}
                         style={styles.joinBanner}
                     >
                         <LinearGradient
@@ -582,7 +576,7 @@ const styles = StyleSheet.create({
     loadMoreText: { fontWeight: '700', fontSize: 14 },
     fab: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 100,
         alignSelf: 'center',
         width: 60,
         height: 60,

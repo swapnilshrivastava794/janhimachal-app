@@ -117,16 +117,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             // Handle the new response structure
             if (response.data.status === true) {
-                const { access, refresh, user_id, user_type } = response.data.data;
+                const { access, refresh, user_id, user_type, first_name, last_name, email: userEmail } = response.data.data;
 
-                // Create a user object since the API only returns user_id and user_type
-                const isEmail = email.includes('@');
+                // Create a user object with full details from the API
                 const userWithStats: User = {
                     id: user_id,
                     user_type: user_type,
-                    name: isEmail ? email.split('@')[0] : (email || 'User'),
-                    email: isEmail ? email : '', // Don't store phone number in email field
-                    username: isEmail ? email.split('@')[0] : email,
+                    first_name: first_name,
+                    last_name: last_name,
+                    name: `${first_name || ''} ${last_name || ''}`.trim() || userEmail || email || 'User',
+                    email: userEmail || (email.includes('@') ? email : ''),
+                    username: userEmail?.split('@')[0] || (email.includes('@') ? email.split('@')[0] : email),
                     avatar: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=400&auto=format&fit=crop',
                     stats: {
                         savedNews: 0,
@@ -310,12 +311,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || userData.username,
                         user_type: (data.profile_exists || data.parent_profile) ? 'nanhe_patrakar' : user?.user_type
                     };
-                    
+
                     // Deep compare to prevent unnecessary re-renders
                     if (JSON.stringify(updatedUser) !== JSON.stringify(user)) {
-                         // console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
-                         setUser(updatedUser);
-                         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+                        // console.log('👤 AuthContext: Updating User Info:', updatedUser.name, 'Type:', updatedUser.user_type);
+                        setUser(updatedUser);
+                        await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
                     }
                 }
 
@@ -323,10 +324,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 // EDITED: Relaxed condition - if parent_profile data exists, use it (even if profile_exists is false - e.g. payment pending)
                 if (data.parent_profile) {
                     // console.log('🏘️ AuthContext: Parent Profile Found:', data.parent_profile.city);
-                    
+
                     // Only update if changed
                     if (JSON.stringify(data.parent_profile) !== JSON.stringify(parentProfile)) {
-                         setParentProfile(data.parent_profile);
+                        setParentProfile(data.parent_profile);
                     }
 
                     // Ensure user_type is updated

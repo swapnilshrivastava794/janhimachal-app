@@ -1,6 +1,5 @@
-import messaging from '@react-native-firebase/messaging';
+// Forced refresh: 2026-01-29
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import * as Notifications from 'expo-notifications';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -11,8 +10,21 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import {
+  AuthorizationStatus,
+  getInitialNotification,
+  getMessaging,
+  getToken,
+  onMessage,
+  onNotificationOpenedApp,
+  requestPermission,
+  setBackgroundMessageHandler,
+  subscribeToTopic
+} from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
+
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: '(tabs)',
 };
 
 // Configure notification behavior to show notifications even when app is in foreground
@@ -25,15 +37,45 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// Helper for scheduling local notification from FCM message
+async function scheduleLocalNotification(remoteMessage: any) {
+  if (remoteMessage.notification) {
+    const imageUrl = remoteMessage.notification.android?.imageUrl || remoteMessage.data?.imageUrl;
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: remoteMessage.notification.title,
+        body: remoteMessage.notification.body,
+        data: remoteMessage.data,
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        channelId: 'janhimachal_alerts', // Changed from default
+        ...(imageUrl ? {
+          attachments: [{ url: imageUrl }],
+          launchImageDisplay: true
+        } : {}),
+      } as any,
+      trigger: null,
+    }).catch(err => console.log('❌ Error scheduling notification:', err));
+  }
+}
+
+// Handle background messages
+setBackgroundMessageHandler(getMessaging(), async (remoteMessage: any) => {
+  console.log('📬 Message handled in the background!', remoteMessage);
+  await scheduleLocalNotification(remoteMessage);
+});
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const router = useRouter();
 
   useEffect(() => {
     let unsubscribe: undefined | (() => void);
+    let responseListener: any;
 
     // Handle Local Notification Click (Foreground)
-    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+    responseListener = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = response.notification.request.content.data;
       if (data?.id) {
         console.log('📬 Local Notification Clicked:', data);
@@ -41,67 +83,69 @@ export default function RootLayout() {
       }
     });
 
-    // ... [rest of the setupFirebaseMessaging logic] ...
-    // Note: I need to duplicate the logic here or just replace the parts I need?
-    // replace_file_content replaces the whole block.
-    // I will include the existing logic inside.
-
     // Request notification permission and setup FCM
     async function setupFirebaseMessaging() {
       try {
         // Set up Android Channel
         if (Platform.OS === 'android') {
-          await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
+          console.log('🛠 Setting up notification channel...');
+          await Notifications.setNotificationChannelAsync('janhimachal_alerts', {
+            name: 'Jan Himachal Alerts',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
+            enableVibrate: true,
+            showBadge: true,
+            bypassDnd: true,
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
           });
+          const channels = await Notifications.getNotificationChannelsAsync();
+          console.log('📋 Available channels:', channels.map(c => c.id));
         }
 
         // Request permission (iOS & Android 13+)
-        const authStatus = await messaging().requestPermission();
+        const msg = getMessaging();
+
+        // Check Expo Permissions too
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        const authStatus = await requestPermission(msg);
         const enabled =
-          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL ||
+          finalStatus === 'granted';
 
         if (enabled) {
-          console.log('✅ Notification permission granted');
+          console.log('✅ Notification permission granted (FCM:', authStatus, 'Expo:', finalStatus, ')');
         } else {
           console.log('❌ Notification permission denied');
           return;
         }
 
         // Get FCM Token
-        const token = await messaging().getToken();
+        const token = await getToken(msg);
         console.log('🔥 ================================');
         console.log('🔥 FCM TOKEN:');
         console.log('🔥', token);
         console.log('🔥 ================================');
 
         // Subscribe to 'news' topic
-        await messaging().subscribeToTopic('news');
+        await subscribeToTopic(msg, 'news');
         console.log('✅ Subscribed to topic: news');
 
         // Listen to foreground messages
-        unsubscribe = messaging().onMessage(async (remoteMessage) => {
+        unsubscribe = onMessage(msg, async (remoteMessage: any) => {
           console.log('📬 Foreground notification received:', remoteMessage);
-
-          // Schedule local notification to show in the status bar
-          if (remoteMessage.notification) {
-            await Notifications.scheduleNotificationAsync({
-              content: {
-                title: remoteMessage.notification.title,
-                body: remoteMessage.notification.body,
-                data: remoteMessage.data,
-              },
-              trigger: null, // Show immediately
-            });
-          }
+          await scheduleLocalNotification(remoteMessage);
         });
 
         // Listen to background/quit state messages (Deep Linking)
-        messaging().onNotificationOpenedApp((remoteMessage) => {
+        onNotificationOpenedApp(msg, (remoteMessage: any) => {
           console.log('📬 Notification opened from background:', remoteMessage);
           if (remoteMessage.data?.id) {
             router.push(`/post/${remoteMessage.data.id}`);
@@ -109,9 +153,8 @@ export default function RootLayout() {
         });
 
         // Check if app was opened from a notification (quit state)
-        messaging()
-          .getInitialNotification()
-          .then((remoteMessage) => {
+        getInitialNotification(msg)
+          .then((remoteMessage: any) => {
             if (remoteMessage?.data?.id) {
               console.log('📬 Notification opened from quit state:', remoteMessage);
               // Small delay to ensure navigation is ready
@@ -130,7 +173,7 @@ export default function RootLayout() {
 
     return () => {
       if (unsubscribe) unsubscribe();
-      responseListener.remove();
+      if (responseListener) responseListener.remove();
     };
   }, []);
 
@@ -141,7 +184,7 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
-            <Stack.Screen name="nanhe-patrakar" options={{ headerShown: false }} />
+            <Stack.Screen name="nanhe-patrakar-guide" options={{ headerShown: false }} />
             <Stack.Screen name="nanhe-patrakar-registration" options={{ headerShown: false }} />
             <Stack.Screen name="nanhe-patrakar-submission" options={{ headerShown: false }} />
             <Stack.Screen name="nanhe-patrakar-portfolio" options={{ headerShown: false }} />
