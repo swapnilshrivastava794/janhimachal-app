@@ -16,7 +16,6 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -34,7 +33,7 @@ export default function EditChildProfileScreen() {
     const { profileData } = useLocalSearchParams<{ profileData: string }>();
     const insets = useSafeAreaInsets();
     const initialProfile = profileData ? JSON.parse(profileData) : null;
-    
+
     const router = useRouter();
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
@@ -132,10 +131,10 @@ export default function EditChildProfileScreen() {
     };
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: STATUSBAR_HEIGHT }]}>
             <Stack.Screen options={{ headerShown: false }} />
-            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-            
+            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={theme.background} translucent />
+
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -146,7 +145,7 @@ export default function EditChildProfileScreen() {
 
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    
+
                     {/* Photos Section */}
                     <View style={styles.photoSection}>
                         <TouchableOpacity onPress={() => pickImage('photo')} style={styles.avatarMain}>
@@ -167,7 +166,7 @@ export default function EditChildProfileScreen() {
                     <View style={styles.form}>
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: theme.text }]}>नाम (Full Name)</Text>
-                            <TextInput 
+                            <TextInput
                                 style={[styles.input, { color: theme.text, borderColor: theme.borderColor }]}
                                 value={name}
                                 onChangeText={setName}
@@ -179,7 +178,7 @@ export default function EditChildProfileScreen() {
                         <View style={styles.row}>
                             <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                                 <Text style={[styles.label, { color: theme.text }]}>उम्र (Age)</Text>
-                                <TextInput 
+                                <TextInput
                                     style={[styles.input, { color: theme.text, borderColor: theme.borderColor }]}
                                     value={age}
                                     onChangeText={setAge}
@@ -189,13 +188,13 @@ export default function EditChildProfileScreen() {
                             <View style={[styles.inputGroup, { flex: 1 }]}>
                                 <Text style={[styles.label, { color: theme.text }]}>लिंग (Gender)</Text>
                                 <View style={styles.genderRow}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         onPress={() => setGender('M')}
                                         style={[styles.genderBtn, gender === 'M' && { backgroundColor: theme.primary, borderColor: theme.primary }]}
                                     >
                                         <Text style={[styles.genderText, gender === 'M' && { color: '#fff' }]}>M</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         onPress={() => setGender('F')}
                                         style={[styles.genderBtn, gender === 'F' && { backgroundColor: theme.primary, borderColor: theme.primary }]}
                                     >
@@ -207,7 +206,7 @@ export default function EditChildProfileScreen() {
 
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: theme.text }]}>स्कूल का नाम (School Name)</Text>
-                            <TextInput 
+                            <TextInput
                                 style={[styles.input, { color: theme.text, borderColor: theme.borderColor }]}
                                 value={schoolName}
                                 onChangeText={setSchoolName}
@@ -218,7 +217,7 @@ export default function EditChildProfileScreen() {
 
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: theme.text }]}>ज़िला (District)</Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setShowDistrictModal(true)}
                                 style={[styles.input, { borderColor: theme.borderColor, justifyContent: 'center' }]}
                             >
@@ -230,7 +229,7 @@ export default function EditChildProfileScreen() {
 
                         <View style={styles.inputGroup}>
                             <Text style={[styles.label, { color: theme.text }]}>पहचान पत्र (ID Proof)</Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => pickImage('id_proof')}
                                 style={[styles.idProofBox, { borderColor: theme.borderColor, backgroundColor: theme.primary + '03' }]}
                             >
@@ -245,7 +244,7 @@ export default function EditChildProfileScreen() {
                             </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={[styles.saveBtn, { backgroundColor: theme.primary }]}
                             onPress={handleUpdate}
                             disabled={isSubmitting}
@@ -271,11 +270,11 @@ export default function EditChildProfileScreen() {
                                 <Ionicons name="close" size={24} color={theme.text} />
                             </TouchableOpacity>
                         </View>
-                        <FlatList 
+                        <FlatList
                             data={districts}
                             keyExtractor={(item) => item.id.toString()}
                             renderItem={({ item }) => (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={styles.districtItem}
                                     onPress={() => {
                                         setDistrict(item.name);
@@ -291,7 +290,7 @@ export default function EditChildProfileScreen() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 

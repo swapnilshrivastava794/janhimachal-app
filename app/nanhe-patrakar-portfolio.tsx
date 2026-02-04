@@ -1,4 +1,4 @@
-import { checkCertificateStatus, createRazorpayOrder, getMyChildProfiles, getSubmissionStats, getSubmissions, verifyRazorpayPayment } from '@/api/server';
+import { checkCertificateStatus, getMyChildProfiles, getSubmissionStats, getSubmissions } from '@/api/server';
 import { PortfolioSkeleton } from '@/components/NanhePatrakarSkeleton';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
@@ -27,7 +27,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -195,85 +194,7 @@ export default function NanhePatrakarPortfolioScreen() {
         }
     };
 
-    const startPayment = (orderData: any) => {
-        const rzpOrderId = orderData?.id || orderData?.razorpay_order_id;
-        if (!rzpOrderId) {
-            console.error("❌ Order ID missing. Received:", JSON.stringify(orderData));
-            Alert.alert("Error", "Invalid Order Data received from server.");
-            return;
-        }
-        const options = {
-            description: 'Nanhe Patrakar Registration',
-            image: 'https://janhimachal.com/static/img/logo.png',
-            currency: 'INR',
-            key: constant.razorpayKeyId?.trim(),
-            amount: orderData.amount, // amount should be in paise
-            name: 'Jan Himachal',
-            order_id: rzpOrderId,
-            prefill: {
-                email: user?.email || 'help@janhimachal.com',
-                contact: user?.phone || '',
-                name: user?.name || ''
-            },
-            theme: { color: theme.primary }
-        };
-
-        RazorpayCheckout.open(options).then(async (data: any) => {
-            // console.log(`Payment Success: ${data.razorpay_payment_id}`);
-            try {
-                const verifyPayload = {
-                    razorpay_order_id: data.razorpay_order_id,
-                    razorpay_payment_id: data.razorpay_payment_id,
-                    razorpay_signature: data.razorpay_signature
-                };
-
-                const verifyRes = await verifyRazorpayPayment(verifyPayload);
-
-                if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
-                    Alert.alert('Payment Successful', 'आपका भुगतान सफल रहा!');
-                    setIsPaid(true); // Hide banner
-                    await refreshProfile(); // Update Context
-                    fetchPortfolioData();   // Update UI
-                } else {
-                    Alert.alert('Processing', 'Payment received. Verifying status...');
-                    setIsPaid(true); // Hide banner assuming success
-                    await refreshProfile();
-                    fetchPortfolioData();
-                }
-            } catch (verifyErr: any) {
-                console.error('Verify Error:', verifyErr);
-                Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है।');
-                setIsPaid(true);
-                fetchPortfolioData();
-            }
-        }).catch((error: any) => {
-            console.log(`Error: ${error.code} | ${error.description}`);
-            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
-            // Refresh profile to ensure context is updated
-            refreshProfile();
-            // Stay on portfolio page instead of redirecting to profile
-        });
-    };
-
-
-    const handlePayment = async () => {
-        setIsLoading(true);
-        try {
-            // console.log("🚀 Starting Direct Payment from Portfolio...");
-            const orderResponse = await createRazorpayOrder();
-            if (orderResponse.data && orderResponse.data.status) {
-                const orderData = orderResponse.data.data || orderResponse.data;
-                startPayment(orderData);
-            } else {
-                Alert.alert('Error', orderResponse.data?.message || 'Failed to create order');
-            }
-        } catch (err: any) {
-            console.error(err);
-            Alert.alert('Error', 'Payment initiation failed. Are you sure you are enrolled?');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // Payment is now handled via external link in the UI (constant.nanhePatrakarPaymentLink)
 
     if (authLoading || isLoading) {
         return (
@@ -506,7 +427,7 @@ export default function NanhePatrakarPortfolioScreen() {
                             </View>
                         </View>
                     </View>
-                    <View style={styles.statsRow}>
+                    {/* <View style={styles.statsRow}>
                         <View style={styles.statItem}>
                             <Text style={[styles.statValue, { color: theme.text }]}>
                                 {stats?.total_approved?.toString().padStart(2, '0') || '00'}
@@ -527,7 +448,7 @@ export default function NanhePatrakarPortfolioScreen() {
                             </Text>
                             <Text style={styles.statLabel}>शाबाशी</Text>
                         </View>
-                    </View>
+                    </View> */}
                 </View>
 
                 <Text style={[styles.sectionHeading, { color: theme.text }]}>नन्हा पत्रकार प्रमाण-पत्र</Text>

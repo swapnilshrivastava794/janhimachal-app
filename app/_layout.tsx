@@ -39,32 +39,43 @@ Notifications.setNotificationHandler({
 
 // Helper for scheduling local notification from FCM message
 async function scheduleLocalNotification(remoteMessage: any) {
-  if (remoteMessage.notification) {
-    const imageUrl = remoteMessage.notification.android?.imageUrl || remoteMessage.data?.imageUrl;
+  try {
+    if (remoteMessage.notification) {
+      const imageUrl = remoteMessage.notification.android?.imageUrl || remoteMessage.data?.imageUrl;
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: remoteMessage.notification.title,
-        body: remoteMessage.notification.body,
-        data: remoteMessage.data,
-        sound: 'default',
-        priority: Notifications.AndroidNotificationPriority.MAX,
-        channelId: 'janhimachal_alerts', // Changed from default
-        ...(imageUrl ? {
-          attachments: [{ url: imageUrl }],
-          launchImageDisplay: true
-        } : {}),
-      } as any,
-      trigger: null,
-    }).catch(err => console.log('❌ Error scheduling notification:', err));
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: remoteMessage.notification.title,
+          body: remoteMessage.notification.body,
+          data: remoteMessage.data,
+          sound: 'default',
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          channelId: 'janhimachal_alerts',
+          ...(imageUrl ? {
+            attachments: [{ url: imageUrl }],
+            launchImageDisplay: true
+          } : {}),
+        } as any,
+        trigger: null,
+      });
+    }
+  } catch (err) {
+    console.log('❌ Error scheduling notification:', err);
   }
 }
 
-// Handle background messages
-setBackgroundMessageHandler(getMessaging(), async (remoteMessage: any) => {
-  console.log('📬 Message handled in the background!', remoteMessage);
-  await scheduleLocalNotification(remoteMessage);
-});
+// Global attempt to set background handler, but wrapped
+try {
+  const messaging = getMessaging();
+  if (messaging) {
+    setBackgroundMessageHandler(messaging, async (remoteMessage: any) => {
+      console.log('📬 Message handled in the background!', remoteMessage);
+      await scheduleLocalNotification(remoteMessage);
+    });
+  }
+} catch (e) {
+  console.log('⚠️ Firebase Background Messaging not available');
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -128,41 +139,41 @@ export default function RootLayout() {
         }
 
         // Get FCM Token
-        const token = await getToken(msg);
-        console.log('🔥 ================================');
-        console.log('🔥 FCM TOKEN:');
-        console.log('🔥', token);
-        console.log('🔥 ================================');
+        try {
+          const token = await getToken(msg);
+          console.log('🔥 FCM TOKEN:', token);
 
-        // Subscribe to 'news' topic
-        await subscribeToTopic(msg, 'news');
-        console.log('✅ Subscribed to topic: news');
+          // Subscribe to 'news' topic
+          await subscribeToTopic(msg, 'news');
+          console.log('✅ Subscribed to topic: news');
 
-        // Listen to foreground messages
-        unsubscribe = onMessage(msg, async (remoteMessage: any) => {
-          console.log('📬 Foreground notification received:', remoteMessage);
-          await scheduleLocalNotification(remoteMessage);
-        });
+          // Listen to foreground messages
+          unsubscribe = onMessage(msg, async (remoteMessage: any) => {
+            console.log('📬 Foreground notification received:', remoteMessage);
+            await scheduleLocalNotification(remoteMessage);
+          });
 
-        // Listen to background/quit state messages (Deep Linking)
-        onNotificationOpenedApp(msg, (remoteMessage: any) => {
-          console.log('📬 Notification opened from background:', remoteMessage);
-          if (remoteMessage.data?.id) {
-            router.push(`/post/${remoteMessage.data.id}`);
-          }
-        });
-
-        // Check if app was opened from a notification (quit state)
-        getInitialNotification(msg)
-          .then((remoteMessage: any) => {
-            if (remoteMessage?.data?.id) {
-              console.log('📬 Notification opened from quit state:', remoteMessage);
-              // Small delay to ensure navigation is ready
-              setTimeout(() => {
-                router.push(`/post/${remoteMessage.data!.id}`);
-              }, 500);
+          // Listen to background/quit state messages (Deep Linking)
+          onNotificationOpenedApp(msg, (remoteMessage: any) => {
+            console.log('📬 Notification opened from background:', remoteMessage);
+            if (remoteMessage.data?.id) {
+              router.push(`/post/${remoteMessage.data.id}`);
             }
           });
+
+          // Check if app was opened from a notification (quit state)
+          getInitialNotification(msg)
+            .then((remoteMessage: any) => {
+              if (remoteMessage?.data?.id) {
+                console.log('📬 Notification opened from quit state:', remoteMessage);
+                setTimeout(() => {
+                  router.push(`/post/${remoteMessage.data!.id}`);
+                }, 500);
+              }
+            });
+        } catch (tokenErr) {
+          console.log('⚠️ Firebase setup incomplete (likely missing native modules or config):', tokenErr);
+        }
 
       } catch (error) {
         console.log('❌ Error setting up Firebase Messaging:', error);

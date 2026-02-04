@@ -399,9 +399,9 @@ export default function HomeScreen() {
               <View style={{ backgroundColor: theme.primary, width: 4, height: 20, borderRadius: 2 }} />
               <Text style={{ fontSize: 18, fontWeight: '900', color: theme.text }}>नन्हे पत्रकारों की कलम से</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/nanhe-patrakar-hub' as any)}>
+            {/* <TouchableOpacity onPress={() => router.push('/nanhe-patrakar-hub' as any)}>
               <Text style={{ color: theme.primary, fontWeight: '700', fontSize: 12 }}>View Hub</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
 
           <FlatList

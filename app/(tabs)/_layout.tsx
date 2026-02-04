@@ -99,24 +99,17 @@ const TabsLayoutInner = () => {
         options={{
           headerShown: false,
           title: 'नन्हे पत्रकार',
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <View style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: '#a8272cff',
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              borderWidth: 1.5,
+              borderColor: '#E31E24',
               justifyContent: 'center',
               alignItems: 'center',
-              marginBottom: 20, // Adjusted to match new tab bar height
-              elevation: 10,
-              shadowColor: '#E31E24',
-              shadowOffset: { width: 0, height: 5 },
-              shadowOpacity: 0.4,
-              shadowRadius: 10,
-              borderWidth: 4,
-              borderColor: '#fff',
             }}>
-              <Ionicons size={30} name="star" color="#fff" />
+              <Ionicons size={18} name={focused ? "star" : "star-outline"} color="#E31E24" />
             </View>
           ),
         }}

@@ -46,30 +46,30 @@ axiosInstance.interceptors.response.use(
 
     // IF 401 Unauthorized AND NOT already retried
     const isLoginRequest = originalRequest.url && (originalRequest.url.includes("api/nanhe-patrakar/login/") || originalRequest.url.includes("api/auth/login/"));
-    
+
     if (error.response?.status === 401 && !originalRequest._retry && !isLoginRequest) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = await AsyncStorage.getItem("refreshToken");
         if (!refreshToken) {
-            // No refresh token -> Logout
-            await logoutUser();
-            return Promise.reject(error);
+          // No refresh token -> Logout
+          await logoutUser();
+          return Promise.reject(error);
         }
 
         // Call Refresh API
         // Adjust endpoint based on your backend: /api/token/refresh/ is common
         const res = await axios.post(`${constant.appBaseUrl}/api/token/refresh/`, {
-            refresh: refreshToken
+          refresh: refreshToken
         });
 
         if (res.data.access) {
-            await saveToken(res.data.access, res.data.refresh || refreshToken);
-            
-            // Retry original request with new token
-            originalRequest.headers["Authorization"] = `Bearer ${res.data.access}`;
-            return axiosInstance(originalRequest);
+          await saveToken(res.data.access, res.data.refresh || refreshToken);
+
+          // Retry original request with new token
+          originalRequest.headers["Authorization"] = `Bearer ${res.data.access}`;
+          return axiosInstance(originalRequest);
         }
       } catch (refreshError) {
         // Refresh failed -> Logout
@@ -117,7 +117,7 @@ export function login(payload) {
   const formData = new FormData();
   formData.append('username', payload.username);
   formData.append('password', payload.password);
-  
+
   return axiosInstance.post("/api/nanhe-patrakar/login/", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
@@ -232,7 +232,7 @@ export function updateParentProfile(payload) {
 // ENROLLMENT → multipart/form-data
 export function enrollNanhePatrakar(payload) {
   const formData = new FormData();
-  
+
   // Append all fields to FormData
   Object.keys(payload).forEach((key) => {
     if (payload[key] !== undefined && payload[key] !== null) {
@@ -291,15 +291,5 @@ export const searchNews = async (query, params = {}) => {
 };
 
 
-
-// RAZORPAY PAYMENT APIS
-export function createRazorpayOrder() {
-  return axiosInstance.post("/api/nanhe-patrakar/payment/create-order/");
-}
-
-export function verifyRazorpayPayment(payload) {
-  // payload: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
-  return axiosInstance.post("/api/nanhe-patrakar/payment/verify/", payload);
-}
 
 export default axiosInstance;

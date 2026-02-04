@@ -1,4 +1,4 @@
-import { createRazorpayOrder, enrollNanhePatrakar, getDistricts, verifyRazorpayPayment } from '@/api/server';
+import { enrollNanhePatrakar, getDistricts } from '@/api/server';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +15,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -25,7 +26,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -178,89 +178,19 @@ export default function NanhePatrakarRegistrationScreen() {
     );
   };
 
-  const startPayment = (orderData: any) => {
-    const rzpOrderId = orderData?.id || orderData?.razorpay_order_id;
-    if (!rzpOrderId) {
-      console.error("❌ Order ID missing. Received:", JSON.stringify(orderData));
-      Alert.alert("Error", "Payment initialization failed due to invalid order data.");
-      return;
-    }
-    // console.log('Initiating Payment with order:', rzpOrderId);
-    const options = {
-      description: 'Nanhe Patrakar Registration',
-      image: 'https://janhimachal.com/static/img/logo.png',
-      currency: 'INR',
-      key: constant.razorpayKeyId?.trim(),
-      amount: orderData.amount,
-      name: 'Jan Himachal',
-      order_id: rzpOrderId,
-      prefill: {
-        email: user?.email || 'help@janhimachal.com',
-        contact: guardianPhone || user?.phone || '',
-        name: studentName || guardianName || ''
-      },
-      theme: { color: theme.primary }
-    };
-
-    RazorpayCheckout.open(options).then(async (data: any) => {
-      // handle success
-      //   console.log(`Payment Success: ${data.razorpay_payment_id}`);
-
-      try {
-        // Call Backend Verify API
-        const verifyPayload = {
-          razorpay_order_id: data.razorpay_order_id,
-          razorpay_payment_id: data.razorpay_payment_id,
-          razorpay_signature: data.razorpay_signature
-        };
-
-        const verifyRes = await verifyRazorpayPayment(verifyPayload);
-        //   console.log('✅ Verify Response:', JSON.stringify(verifyRes.data, null, 2));
-
-        if (verifyRes.data && verifyRes.data.payment_status === "SUCCESS") {
-          Alert.alert('Payment Successful', 'आपका पंजीकरण और भुगतान सफल रहा!');
-          // Update Context
-          await refreshProfile();
-          router.replace('/nanhe-patrakar-portfolio' as any);
-        } else {
-          Alert.alert('Processing', 'Payment received. Verifying status...');
-          await refreshProfile();
-          router.replace('/nanhe-patrakar-portfolio' as any);
-        }
-      } catch (verifyErr: any) {
-        console.error('Verify Error:', verifyErr);
-        // Even if verification API fails on client, if money is deducted, webhook should handle it.
-        // But effectively we show success to user if Razorpay said success.
-        Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है। थोड़ी देर में प्रोफाइल अपडेट हो जाएगी।');
-        router.replace('/nanhe-patrakar-portfolio' as any);
-      }
-
-    }).catch((error: any) => {
-      // handle failure
-      console.log(`Error: ${error.code} | ${error.description}`);
-      Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा। कृपया पुन: प्रयास करें।');
-      // Refresh profile to ensure context is updated
-      refreshProfile();
-      // Stay on current page instead of redirecting
-    });
-  };
-
+  // Payment is now handled via external link
   const handlePaymentOnly = async () => {
     setIsSubmitting(true);
     try {
-      // console.log("🚀 Starting Direct Payment Flow (Retry Mode)...");
-      const orderResponse = await createRazorpayOrder();
-      // console.log('📦 Razorpay Order (Retry):', JSON.stringify(orderResponse.data, null, 2));
-
-      if (orderResponse.data && orderResponse.data.status) {
-        const orderData = orderResponse.data.data || orderResponse.data;
-        startPayment(orderData);
-      } else {
-        throw new Error(orderResponse.data?.message || 'Failed to create payment order');
-      }
-    } catch (orderErr: any) {
-      console.error('Order Creation Error:', orderErr);
-      Alert.alert('त्रुटि', orderErr.message || 'भुगतान आदेश बनाने में विफल।');
+      // Open external payment link
+      await Linking.openURL(constant.nanhePatrakarPaymentLink);
+      Alert.alert(
+        'भुगतान के लिए रीडायरेक्ट',
+        'भुगतान पूरा होने के बाद कृपया ऐप पर वापस आएं और थोड़ी देर में प्रोफ़ाइल रिफ्रेश करें।',
+        [{ text: 'ठीक है', onPress: () => refreshProfile() }]
+      );
+    } catch (err: any) {
+      Alert.alert('त्रुटि', 'भुगतान लिंक खोलने में समस्या हुई।');
     } finally {
       setIsSubmitting(false);
     }

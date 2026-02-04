@@ -140,7 +140,10 @@ export default function NanhePatrakarHubScreen() {
         try {
             const res = await getChildProfilesList();
             if (res.data && res.data.status && res.data.data && res.data.data.results) {
-                setChildProfiles(res.data.data.results);
+                const filteredProfiles = res.data.data.results.filter((child: any) =>
+                    !child.name.toLowerCase().includes('to be updated')
+                );
+                setChildProfiles(filteredProfiles);
             }
         } catch (err) {
             console.error("Error fetching child profiles:", err);
@@ -382,10 +385,15 @@ export default function NanhePatrakarHubScreen() {
             {/* --- Submit FAB (Only for registered kids) --- */}
             {hasRegisteredChild && (
                 <TouchableOpacity
-                    style={[styles.fab, { backgroundColor: theme.primary }]}
+                    style={styles.fab}
                     onPress={() => router.push('/nanhe-patrakar-submission' as any)}
                 >
-                    <Ionicons name="add" size={32} color="#fff" />
+                    <LinearGradient
+                        colors={['#E31E24', '#B71C1C']}
+                        style={styles.fabGradient}
+                    >
+                        <Ionicons name="add" size={32} color="#fff" />
+                    </LinearGradient>
                 </TouchableOpacity>
             )}
         </View>
@@ -576,17 +584,22 @@ const styles = StyleSheet.create({
     loadMoreText: { fontWeight: '700', fontSize: 14 },
     fab: {
         position: 'absolute',
-        bottom: 100,
-        alignSelf: 'center',
+        bottom: 110,
+        right: 20,
         width: 60,
         height: 60,
         borderRadius: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
         elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 5 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
+        overflow: 'hidden',
+    },
+    fabGradient: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
     }
 });

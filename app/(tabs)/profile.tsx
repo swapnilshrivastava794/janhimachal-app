@@ -242,7 +242,7 @@ export default function ProfileScreen() {
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.childName}>{child.name}</Text>
                                             <Text style={styles.childBrief}>
-                                                {parentProfile.program.name_hindi || parentProfile.program.name} • {parentProfile.district.name}
+                                                {(parentProfile?.program?.name_hindi || parentProfile?.program?.name || '')} {parentProfile?.district?.name ? `• ${parentProfile.district.name}` : ''}
                                             </Text>
                                         </View>
                                         <View style={styles.childVerified}>
@@ -250,7 +250,7 @@ export default function ProfileScreen() {
                                         </View>
                                     </View>
 
-                                    <View style={styles.childStats}>
+                                    {/* <View style={styles.childStats}>
                                         <View style={styles.statMini}>
                                             <Text style={styles.statMiniVal}>--</Text>
                                             <Text style={styles.statMiniLab}>खबरें</Text>
@@ -265,7 +265,7 @@ export default function ProfileScreen() {
                                             <Text style={styles.statMiniVal}>--</Text>
                                             <Text style={styles.statMiniLab}>शाबाशी</Text>
                                         </View>
-                                    </View>
+                                    </View> */}
 
                                     <View style={styles.prideFooter}>
                                         <Text style={styles.prideActionText}>पोर्टफोलियो और आईडी कार्ड देखें</Text>

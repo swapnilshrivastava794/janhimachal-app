@@ -30,7 +30,7 @@ export default function NanhePatrakarReaderScreen() {
     const colorScheme = useColorScheme();
     const theme = Colors[colorScheme ?? 'light'];
     const { id } = useLocalSearchParams<{ id: string }>();
-    
+
     const [likes, setLikes] = useState(12);
     const [isLiked, setIsLiked] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +77,7 @@ export default function NanhePatrakarReaderScreen() {
                 videoRef.current.playAsync();
             }
         };
-        
+
         if (item.media_type === 'VIDEO') {
             return (
                 <View style={{ width, height: 480, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
@@ -95,10 +95,10 @@ export default function NanhePatrakarReaderScreen() {
                             setIsBuffering((status as any).isBuffering);
                         }}
                     />
-                    
+
                     {/* Big Center Play Button - Active when not playing */}
                     {!status.isPlaying && (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.playOverlay}
                             onPress={handlePlayPress}
                             activeOpacity={0.8}
@@ -127,13 +127,13 @@ export default function NanhePatrakarReaderScreen() {
 
         return (
             <View style={{ width, height: 480, backgroundColor: theme.primary + '10', overflow: 'hidden' }}>
-                <ExpoImage 
-                    source={{ uri: mediaUrl }} 
-                    style={[styles.heroImg, { width }]} 
+                <ExpoImage
+                    source={{ uri: mediaUrl }}
+                    style={[styles.heroImg, { width }]}
                     contentFit="cover"
                     transition={1000}
                     onLoad={() => setIsLoaded(true)}
-                    // Removed the low-res placeholder that was causing the 'small image' look
+                // Removed the low-res placeholder that was causing the 'small image' look
                 />
                 {!isLoaded && (
                     <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: theme.primary + '10' }]}>
@@ -185,7 +185,7 @@ export default function NanhePatrakarReaderScreen() {
             <StatusBar barStyle="light-content" translucent />
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-                
+
                 {/* --- Media Slider Section --- */}
                 <View style={styles.heroSection}>
                     <FlatList
@@ -220,12 +220,12 @@ export default function NanhePatrakarReaderScreen() {
                     {articleData.media_files?.length > 1 && (
                         <View style={styles.dotsOverlay}>
                             {articleData.media_files.map((_: any, i: number) => (
-                                <View 
-                                    key={i} 
+                                <View
+                                    key={i}
                                     style={[
-                                        styles.dot, 
+                                        styles.dot,
                                         { backgroundColor: activeIndex === i ? theme.primary : 'rgba(255,255,255,0.5)', width: activeIndex === i ? 20 : 6 }
-                                    ]} 
+                                    ]}
                                 />
                             ))}
                         </View>
@@ -252,15 +252,15 @@ export default function NanhePatrakarReaderScreen() {
                             <Text style={styles.authorSub}>{articleData.child_details?.school} • {new Date(articleData.created_at).toLocaleDateString()}</Text>
                         </View>
                     </View>
-                    <TouchableOpacity 
+                    {/* <TouchableOpacity
                         style={[styles.followBtn, { borderColor: theme.primary }]}
                         onPress={() => setIsLiked(!isLiked)}
                     >
                         <Ionicons name={(isLiked ? "heart" : "heart-outline") as any} size={18} color={isLiked ? theme.error : theme.primary} />
                         <Text style={[styles.followText, { color: isLiked ? theme.error : theme.primary }]}>
-                            {isLiked ? (likes+1) : likes}
+                            {isLiked ? (likes + 1) : likes}
                         </Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
 
                 {/* --- Article Content --- */}
@@ -270,23 +270,6 @@ export default function NanhePatrakarReaderScreen() {
                     </Text>
                 </View>
 
-                {/* --- Shabashi Session (Appreciation) --- */}
-                <View style={[styles.shabashiRow, { backgroundColor: theme.primary + '10' }]}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={[styles.shabashiTitle, { color: theme.primary }]}>शाबाशी दें!</Text>
-                        <Text style={[styles.shabashiSub, { color: theme.placeholderText }]}>{articleData.child_details?.name?.split(' ')[0]} के हौसले को बढ़ाएं</Text>
-                    </View>
-                    <TouchableOpacity 
-                        style={[styles.shabashiBtn, { backgroundColor: theme.primary }]}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                            setIsLiked(true);
-                        }}
-                    >
-                        <Ionicons name="sunny" size={24} color="#fff" />
-                        <Text style={styles.shabashiBtnText}>शाबाशी (Applaud)</Text>
-                    </TouchableOpacity>
-                </View>
 
                 {/* --- About the Journalist --- */}
                 <View style={[styles.aboutJournalist, { backgroundColor: theme.card }]}>
@@ -315,7 +298,7 @@ export default function NanhePatrakarReaderScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     scrollContainer: { paddingBottom: 40 },
-    
+
     // Hero Section
     heroSection: {
         height: 480,

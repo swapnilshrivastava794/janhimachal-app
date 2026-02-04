@@ -1,4 +1,4 @@
-import { createRazorpayOrder, createSubmission, getMyChildProfiles, getNanhePatrakarTopics, verifyRazorpayPayment } from '@/api/server';
+import { createSubmission, getMyChildProfiles, getNanhePatrakarTopics } from '@/api/server';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -26,19 +26,11 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import RazorpayCheckout from 'react-native-razorpay';
+
 
 const { width } = Dimensions.get('window');
 const STATUSBAR_HEIGHT = Constants.statusBarHeight;
 
-const CONTENT_TYPES = [
-    { id: 'ARTICLE', label: 'लेख (Article)', icon: 'document-text' },
-    { id: 'POEM', label: 'कविता (Poem)', icon: 'reader' },
-    { id: 'EXPERIENCE', label: 'अनुभव (Exp)', icon: 'bulb' },
-    { id: 'SPEECH', label: 'भाषण (Speech)', icon: 'mic' },
-    { id: 'SONG', label: 'गीत (Song)', icon: 'musical-notes' },
-    { id: 'VIDEO', label: 'वीडियो (Video)', icon: 'videocam' },
-];
 
 const LANGUAGES = [
     { id: 'HINDI', label: 'Hindi' },
@@ -56,7 +48,6 @@ export default function NanhePatrakarSubmissionScreen() {
     const [childId, setChildId] = useState<string | null>(null);
     const [topics, setTopics] = useState<any[]>([]);
     const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-    const [selectedType, setSelectedType] = useState('ARTICLE');
     const [selectedLang, setSelectedLang] = useState('HINDI');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -80,74 +71,7 @@ export default function NanhePatrakarSubmissionScreen() {
         }
     }, [user, parentProfile]);
 
-    const startPayment = (orderData: any) => {
-        const rzpOrderId = orderData.id || orderData.order_id;
-        const options = {
-            description: 'Nanhe Patrakar Registration',
-            image: 'https://janhimachal.com/static/img/logo.png',
-            currency: 'INR',
-            key: constant.razorpayKeyId?.trim(),
-            amount: orderData.amount,
-            name: 'Jan Himachal',
-            order_id: rzpOrderId,
-            prefill: {
-                email: user?.email || 'help@janhimachal.com',
-                contact: user?.phone || '',
-                name: user?.name || ''
-            },
-            theme: { color: theme.primary }
-        };
-
-        RazorpayCheckout.open(options).then(async (data: any) => {
-            try {
-                const verifyPayload = {
-                    razorpay_order_id: data.razorpay_order_id,
-                    razorpay_payment_id: data.razorpay_payment_id,
-                    razorpay_signature: data.razorpay_signature
-                };
-
-                const verifyRes = await verifyRazorpayPayment(verifyPayload);
-
-                if (verifyRes.data && (verifyRes.data.payment_status === "SUCCESS" || verifyRes.data.status === "PAYMENT_COMPLETED")) {
-                    Alert.alert('Success', 'भुगतान सफल रहा!');
-                    setShowPaymentModal(false);
-                    await refreshProfile();
-                    router.replace('/nanhe-patrakar-portfolio' as any);
-                } else {
-                    Alert.alert('Processing', 'Payment received. Verifying status...');
-                    setShowPaymentModal(false);
-                    await refreshProfile();
-                    router.replace('/nanhe-patrakar-portfolio' as any);
-                }
-            } catch (verifyErr: any) {
-                Alert.alert('Payment Received', 'आपका भुगतान प्राप्त हो गया है।');
-                setShowPaymentModal(false);
-                await refreshProfile();
-                router.replace('/nanhe-patrakar-portfolio' as any);
-            }
-        }).catch((error: any) => {
-            Alert.alert('Payment Failed', 'आपका भुगतान विफल रहा।');
-            // Refresh profile to ensure context is updated
-            refreshProfile();
-        });
-    };
-
-    const handlePayment = async () => {
-        setIsLoading(true);
-        try {
-            const orderResponse = await createRazorpayOrder();
-            if (orderResponse.data && orderResponse.data.status) {
-                const orderData = orderResponse.data.data || orderResponse.data;
-                startPayment(orderData);
-            } else {
-                Alert.alert('Error', orderResponse.data?.message || 'Failed to create order');
-            }
-        } catch (err: any) {
-            Alert.alert('Error', 'Payment initiation failed.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // Payment is now handled via external link (constant.nanhePatrakarPaymentLink)
 
 
 
@@ -300,7 +224,7 @@ export default function NanhePatrakarSubmissionScreen() {
             formData.append('child_id', childId);
             formData.append('topic_id', selectedTopic);
             formData.append('title', title);
-            formData.append('content_type', selectedType);
+            formData.append('content_type', 'ARTICLE');
             formData.append('language', selectedLang);
             formData.append('content_text', content);
             formData.append('media_description', mediaDescription);
@@ -371,7 +295,11 @@ export default function NanhePatrakarSubmissionScreen() {
                 </TouchableOpacity>
             </View>
 
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
                 <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
                     <Text style={[styles.sectionLabel, { color: theme.text }]}>विषय (Topic) चुनें</Text>
@@ -382,7 +310,7 @@ export default function NanhePatrakarSubmissionScreen() {
                                 onPress={() => setSelectedTopic(t.id.toString())}
                                 style={[styles.chip, { backgroundColor: selectedTopic === t.id.toString() ? theme.primary : 'transparent', borderColor: theme.primary }]}
                             >
-                                <Text style={[styles.chipText, { color: selectedTopic === t.id.toString() ? '#fff' : theme.text }]}>{t.title_hindi || t.title}</Text>
+                                <Text style={[styles.chipText, { color: selectedTopic === t.id.toString() ? (colorScheme === 'dark' ? '#000' : '#fff') : theme.text }]}>{t.title_hindi || t.title}</Text>
                             </TouchableOpacity>
                         )) : (
                             <View style={{ padding: 15, backgroundColor: theme.primary + '10', borderRadius: 10 }}>
@@ -391,46 +319,51 @@ export default function NanhePatrakarSubmissionScreen() {
                         )}
                     </ScrollView>
 
-                    <Text style={[styles.sectionLabel, { color: theme.text, marginTop: 20 }]}>माध्यम (Type)</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalList} contentContainerStyle={{ gap: 10, paddingRight: 40 }}>
-                        {CONTENT_TYPES.map((item) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                onPress={() => setSelectedType(item.id)}
-                                style={[styles.typeItem, { backgroundColor: selectedType === item.id ? theme.primary : theme.primary + '10', borderColor: theme.primary }]}
-                            >
-                                <Ionicons name={item.icon as any} size={18} color={selectedType === item.id ? '#fff' : theme.primary} />
-                                <Text style={[styles.typeText, { color: selectedType === item.id ? '#fff' : theme.text }]}>{item.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
 
                     <View style={styles.fieldGroup}>
-                        <Text style={styles.inputLabel}>खबर का शीर्षक</Text>
-                        <TextInput style={[styles.titleInput, { color: theme.text, borderBottomColor: theme.borderColor }]} placeholder="यहाँ शीर्षक लिखें..." value={title} onChangeText={setTitle} />
+                        <Text style={[styles.inputLabel, { color: theme.text }]}>खबर का शीर्षक</Text>
+                        <TextInput
+                            style={[styles.titleInput, { color: theme.text, borderBottomColor: theme.borderColor }]}
+                            placeholder="यहाँ शीर्षक लिखें..."
+                            placeholderTextColor={theme.placeholderText}
+                            value={title}
+                            onChangeText={setTitle}
+                        />
                     </View>
 
                     <View style={styles.langContainer}>
                         {LANGUAGES.map((lang) => (
-                            <TouchableOpacity key={lang.id} style={[styles.chip, { backgroundColor: selectedLang === lang.id ? theme.primary + '20' : 'transparent', borderColor: theme.borderColor }]} onPress={() => setSelectedLang(lang.id)}>
+                            <TouchableOpacity
+                                key={lang.id}
+                                style={[styles.chip, { backgroundColor: selectedLang === lang.id ? theme.primary + '20' : 'transparent', borderColor: theme.borderColor }]}
+                                onPress={() => setSelectedLang(lang.id)}
+                            >
                                 <Text style={[styles.chipText, { color: selectedLang === lang.id ? theme.primary : theme.text }]}>{lang.label}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
 
                     <View style={[styles.editorContainer, { borderColor: theme.borderColor }]}>
-                        <TextInput style={[styles.editor, { color: theme.text }]} placeholder="अपनी खबर यहाँ लिखें..." multiline textAlignVertical="top" value={content} onChangeText={setContent} />
+                        <TextInput
+                            style={[styles.editor, { color: theme.text }]}
+                            placeholder="अपनी खबर यहाँ लिखें..."
+                            placeholderTextColor={theme.placeholderText}
+                            multiline
+                            textAlignVertical="top"
+                            value={content}
+                            onChangeText={setContent}
+                        />
                     </View>
 
                     <Text style={[styles.sectionLabel, { color: theme.text }]}>मीडिया अपलोड</Text>
                     <View style={styles.uploadRow}>
                         <TouchableOpacity style={[styles.uploadBox, { borderColor: theme.borderColor }]} onPress={handleImagePicker}>
                             <Ionicons name="camera" size={24} color={theme.primary} />
-                            <Text style={styles.uploadText}>फोटो ({images.length}/2)</Text>
+                            <Text style={[styles.uploadText, { color: theme.text }]}>फोटो ({images.length}/2)</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.uploadBox, { borderColor: theme.borderColor }]} onPress={handleVideoPicker}>
                             <Ionicons name="videocam" size={24} color={theme.primary} />
-                            <Text style={styles.uploadText}>वीडियो ({videos.length}/2)</Text>
+                            <Text style={[styles.uploadText, { color: theme.text }]}>वीडियो ({videos.length}/2)</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -439,7 +372,10 @@ export default function NanhePatrakarSubmissionScreen() {
                             {[...images, ...videos].map((file, idx) => (
                                 <View key={idx} style={styles.thumbWrapper}>
                                     <Image source={{ uri: file.uri }} style={styles.thumb} />
-                                    <TouchableOpacity style={styles.removeBtn} onPress={() => idx < images.length ? setImages(images.filter((_, i) => i !== idx)) : setVideos(videos.filter((_, i) => i !== (idx - images.length)))}>
+                                    <TouchableOpacity
+                                        style={[styles.removeBtn, { backgroundColor: theme.background }]}
+                                        onPress={() => idx < images.length ? setImages(images.filter((_, i) => i !== idx)) : setVideos(videos.filter((_, i) => i !== (idx - images.length)))}
+                                    >
                                         <Ionicons name="close-circle" size={22} color="#E31E24" />
                                     </TouchableOpacity>
                                 </View>
@@ -448,11 +384,18 @@ export default function NanhePatrakarSubmissionScreen() {
                     )}
 
                     <View style={[styles.fieldGroup, { marginTop: 20 }]}>
-                        <Text style={styles.inputLabel}>मीडिया का विवरण (Optional)</Text>
-                        <TextInput style={[styles.descInput, { color: theme.text, borderColor: theme.borderColor }]} placeholder="फोटो/वीडियो के बारे में लिखें..." value={mediaDescription} onChangeText={setMediaDescription} multiline />
+                        <Text style={[styles.inputLabel, { color: theme.text }]}>मीडिया का विवरण (Optional)</Text>
+                        <TextInput
+                            style={[styles.descInput, { color: theme.text, borderColor: theme.borderColor }]}
+                            placeholder="फोटो/वीडियो के बारे में लिखें..."
+                            placeholderTextColor={theme.placeholderText}
+                            value={mediaDescription}
+                            onChangeText={setMediaDescription}
+                            multiline
+                        />
                     </View>
 
-                    <View style={{ height: 100 }} />
+                    <View style={{ height: 200 }} />
                 </ScrollView>
             </KeyboardAvoidingView>
 
@@ -527,7 +470,7 @@ const styles = StyleSheet.create({
     previewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 15 },
     thumbWrapper: { width: (width - 60) / 3, height: (width - 60) / 3, borderRadius: 10, overflow: 'hidden' },
     thumb: { width: '100%', height: '100%' },
-    removeBtn: { position: 'absolute', top: 2, right: 2, backgroundColor: 'white', borderRadius: 11 },
+    removeBtn: { position: 'absolute', top: 2, right: 2, borderRadius: 11 },
     authPromptWrapper: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 },
     authTitle: { fontSize: 18, fontWeight: '800', marginBottom: 20 },
     authLoginBtn: { paddingHorizontal: 40, paddingVertical: 15, borderRadius: 12 },
