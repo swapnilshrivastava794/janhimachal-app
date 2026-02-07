@@ -1,5 +1,4 @@
 import { createSubmission, getMyChildProfiles, getNanhePatrakarTopics } from '@/api/server';
-import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -15,7 +14,6 @@ import {
     Dimensions,
     Image,
     KeyboardAvoidingView,
-    Linking,
     Modal,
     Platform,
     ScrollView,
@@ -24,7 +22,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 
@@ -209,7 +207,8 @@ export default function NanhePatrakarSubmissionScreen() {
                     {
                         text: "रजिस्ट्रेशन करें", onPress: () => {
                             // router.push('/nanhe-patrakar-registration' as any)
-                            Linking.openURL(constant.nanhePatrakarPaymentLink);
+                            // Linking.openURL(constant.nanhePatrakarPaymentLink);
+                            Alert.alert('Coming Soon', 'Registration is temporarily disabled.');
                         }
                     },
                     { text: "बंद करें", style: "cancel" }
@@ -420,10 +419,11 @@ export default function NanhePatrakarSubmissionScreen() {
                             onPress={() => {
                                 // setShowPaymentModal(false);
                                 // router.push('/nanhe-patrakar-portfolio' as any);
-                                Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                // Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                Alert.alert('Coming Soon', 'Subscription process is temporarily restricted.');
                             }}
                         >
-                            <Text style={[styles.payBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>पोर्टफोलियो और भुगतान पर जाएं</Text>
+                            <Text style={[styles.payBtnText, { color: colorScheme === 'dark' ? '#000' : '#fff' }]}>पोर्टफोलियो पर जाएं</Text>
                             <Ionicons name="arrow-forward" size={18} color={colorScheme === 'dark' ? '#000' : '#fff'} />
                         </TouchableOpacity>
 

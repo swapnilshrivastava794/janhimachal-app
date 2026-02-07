@@ -288,7 +288,8 @@ export default function ProfileScreen() {
                             style={styles.prideCard}
                             onPress={() => {
                                 // router.push('/nanhe-patrakar')
-                                Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                // Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                Alert.alert('Coming Soon', 'Nanhe Patrakar registration is limited in this version.');
                             }}
                         >
                             <View style={[styles.prideGradient, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee' }]}>
@@ -456,6 +457,7 @@ export default function ProfileScreen() {
                         </>
                     )}
 
+
                     {isEditing && (
                         <TouchableOpacity
                             style={[styles.updateBtn, isUpdating && { opacity: 0.7 }]}
@@ -471,6 +473,44 @@ export default function ProfileScreen() {
                             </View>
                         </TouchableOpacity>
                     )}
+
+                    {/* --- Contact & Support Section (Added for Play Store Policy) --- */}
+                    <View style={{ marginTop: 25, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 25 }}>
+                        <Text style={[styles.sectionLabel, { marginBottom: 15 }]}>संपर्क और सहायता</Text>
+
+                        <TouchableOpacity
+                            style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', justifyContent: 'space-between' }]}
+                            onPress={() => Linking.openURL('https://www.janhimachal.com/contact-us')}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="headset-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                                <Text style={[styles.input, { fontSize: 16, fontWeight: '600' }]}>संपर्क करें (Contact Us)</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', justifyContent: 'space-between' }]}
+                            onPress={() => Linking.openURL('https://www.janhimachal.com/cmscode-of-ethics/')}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="newspaper-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                                <Text style={[styles.input, { fontSize: 16, fontWeight: '600' }]}>संपादकीय नीति (Editorial Policy)</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', justifyContent: 'space-between' }]}
+                            onPress={() => Linking.openURL('https://www.janhimachal.com/cmsprivacy-policy/')}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Ionicons name="shield-checkmark-outline" size={20} color="#E31E24" style={styles.inputIcon} />
+                                <Text style={[styles.input, { fontSize: 16, fontWeight: '600' }]}>गोपनीयता नीति (Privacy Policy)</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* --- District Modal --- */}

@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,7 +49,6 @@ export default function LoginScreen() {
                         </View>
                     </View>
 
-                    {/* Direct Login Form */}
                     <View style={styles.formContainer}>
 
                         <View style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor }]}>
@@ -78,10 +77,6 @@ export default function LoginScreen() {
                                 <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.placeholderText} />
                             </TouchableOpacity>
                         </View>
-
-                        {/* <TouchableOpacity style={styles.forgotBtn}>
-                    <Text style={[styles.forgotText, { color: theme.primary }]}>पासवर्ड भूल गए? (Forgot Password?)</Text>
-                </TouchableOpacity> */}
 
                         <TouchableOpacity
                             style={[styles.loginBtn, isLoggingIn && { opacity: 0.7 }]}
@@ -130,6 +125,22 @@ export default function LoginScreen() {
                                 <Text style={[styles.signupText, { color: theme.primary }]}>साइन अप (Sign Up)</Text>
                             </TouchableOpacity>
                         </View>
+
+                        {/* Legal Links Footer */}
+                        <View style={styles.legalFooter}>
+                            <TouchableOpacity onPress={() => Linking.openURL('https://www.janhimachal.com/cmsprivacy-policy/')}>
+                                <Text style={[styles.legalLink, { color: theme.placeholderText }]}>Privacy Policy</Text>
+                            </TouchableOpacity>
+                            <Text style={[styles.legalDivider, { color: theme.placeholderText }]}>•</Text>
+                            <TouchableOpacity onPress={() => Linking.openURL('https://www.janhimachal.com/cmscode-of-ethics/')}>
+                                <Text style={[styles.legalLink, { color: theme.placeholderText }]}>Editorial Policy</Text>
+                            </TouchableOpacity>
+                            <Text style={[styles.legalDivider, { color: theme.placeholderText }]}>•</Text>
+                            <TouchableOpacity onPress={() => Linking.openURL('https://www.janhimachal.com/contact-us')}>
+                                <Text style={[styles.legalLink, { color: theme.placeholderText }]}>Contact Us</Text>
+                            </TouchableOpacity>
+                        </View>
+
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -274,5 +285,21 @@ const styles = StyleSheet.create({
     signupText: {
         fontSize: 14,
         fontWeight: '800',
+    },
+    legalFooter: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 30,
+        gap: 10,
+        opacity: 0.7,
+    },
+    legalLink: {
+        fontSize: 12,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+    },
+    legalDivider: {
+        fontSize: 12,
     },
 });

@@ -88,7 +88,7 @@ export function NewsCard({ id, type = 'post', title, image, category, author, da
                 <Text style={styles.categoryBadgeText}>{category?.toUpperCase() || 'NEWS'}</Text>
               </View>
               <Text style={[styles.metaText, { color: theme.icon, marginLeft: 8 }]}>
-                {getTimeAgo()}
+                {getTimeAgo()} • {displayAuthor}
               </Text>
             </>
           ) : (

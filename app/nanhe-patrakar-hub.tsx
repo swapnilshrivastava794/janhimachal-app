@@ -11,9 +11,9 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Dimensions,
     Image,
-    Linking,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -179,7 +179,8 @@ export default function NanhePatrakarHubScreen() {
                                 router.push('/nanhe-patrakar-portfolio' as any);
                             } else {
                                 // router.push('/nanhe-patrakar-registration' as any);
-                                Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                // Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                Alert.alert('Coming Soon', 'Registration is temporarily restricted.');
                             }
                         }}
                         style={[styles.joinHeaderBtn, { backgroundColor: '#E31E24' }]}

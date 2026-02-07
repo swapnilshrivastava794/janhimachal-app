@@ -2,7 +2,7 @@
   "expo": {
     "name": "Jan Himachal",
     "slug": "jan-himachal",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/appicon.png",
     "scheme": "janhimachal",
@@ -20,6 +20,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.markazia.janhimachal",
+      "versionCode": 3,
       "softwareKeyboardLayoutMode": "resize",
       "intentFilters": [
         {

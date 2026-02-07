@@ -1,5 +1,4 @@
 import { enrollNanhePatrakar, getDistricts } from '@/api/server';
-import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -15,7 +14,6 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -180,20 +178,22 @@ export default function NanhePatrakarRegistrationScreen() {
 
   // Payment is now handled via external link
   const handlePaymentOnly = async () => {
-    setIsSubmitting(true);
-    try {
-      // Open external payment link
-      await Linking.openURL(constant.nanhePatrakarPaymentLink);
-      Alert.alert(
-        'भुगतान के लिए रीडायरेक्ट',
-        'भुगतान पूरा होने के बाद कृपया ऐप पर वापस आएं और थोड़ी देर में प्रोफ़ाइल रिफ्रेश करें।',
-        [{ text: 'ठीक है', onPress: () => refreshProfile() }]
-      );
-    } catch (err: any) {
-      Alert.alert('त्रुटि', 'भुगतान लिंक खोलने में समस्या हुई।');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // setIsSubmitting(true);
+    // try {
+    //   // Open external payment link
+    //   await Linking.openURL(constant.nanhePatrakarPaymentLink);
+    //   Alert.alert(
+    //     'भुगतान के लिए रीडायरेक्ट',
+    //     'भुगतान पूरा होने के बाद कृपया ऐप पर वापस आएं और थोड़ी देर में प्रोफ़ाइल रिफ्रेश करें।',
+    //     [{ text: 'ठीक है', onPress: () => refreshProfile() }]
+    //   );
+    // } catch (err: any) {
+    //   Alert.alert('त्रुटि', 'भुगतान लिंक खोलने में समस्या हुई।');
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
+    Alert.alert('Registration Completed', 'Profile will be updated soon.');
+    refreshProfile();
   };
 
   const handleSubmit = async () => {
@@ -295,7 +295,8 @@ export default function NanhePatrakarRegistrationScreen() {
       } else {
         // Fallback just in case the error throws before logic above catches it
         setIsEnrolled(true);
-        await handlePaymentOnly();
+        // await handlePaymentOnly();
+        Alert.alert('Registration Received', 'Process will be updated soon.');
       }
     } finally {
       setIsSubmitting(false);

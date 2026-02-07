@@ -3,7 +3,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getCategories } from '@/api/server';
 import { useCategory } from '@/context/CategoryContext';
@@ -26,6 +27,7 @@ export function CustomHeader() {
     categories,
     setCategories
   } = useCategory();
+  const insets = useSafeAreaInsets();
 
   const categoryScrollRef = React.useRef<ScrollView>(null);
   const subCategoryScrollRef = React.useRef<ScrollView>(null);
@@ -98,8 +100,8 @@ export function CustomHeader() {
   const activeSubcategories = categories.find(c => c.cat_name === selectedCategoryName)?.sub_categories || [];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.headerBg }]}>
-      <SafeAreaView>
+    <View style={[styles.container, { backgroundColor: theme.headerBg, paddingTop: insets.top }]}>
+      <View>
         {/* Top Navbar - Sharp & Bold */}
         <View style={[styles.topBar, { borderBottomColor: theme.borderColor }]}>
           {/* Left: Highlighted Date */}
@@ -192,14 +194,13 @@ export function CustomHeader() {
         <View style={[styles.tickerWrapper, { borderTopColor: theme.borderColor }]}>
           <BreakingNewsTicker />
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
     zIndex: 100,
     elevation: 5,
     shadowColor: '#000',
