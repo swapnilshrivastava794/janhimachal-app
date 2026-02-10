@@ -1,192 +1,19 @@
 // Forced refresh: 2026-01-29
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-import {
-  AuthorizationStatus,
-  getInitialNotification,
-  getMessaging,
-  getToken,
-  onMessage,
-  onNotificationOpenedApp,
-  requestPermission,
-  setBackgroundMessageHandler,
-  subscribeToTopic
-} from '@react-native-firebase/messaging';
-import * as Notifications from 'expo-notifications';
-
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-// Configure notification behavior to show notifications even when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
-// Helper for scheduling local notification from FCM message
-async function scheduleLocalNotification(remoteMessage: any) {
-  try {
-    if (remoteMessage.notification) {
-      const imageUrl = remoteMessage.notification.android?.imageUrl || remoteMessage.data?.imageUrl;
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: remoteMessage.notification.title,
-          body: remoteMessage.notification.body,
-          data: remoteMessage.data,
-          sound: 'default',
-          priority: Notifications.AndroidNotificationPriority.MAX,
-          channelId: 'janhimachal_alerts',
-          ...(imageUrl ? {
-            attachments: [{ url: imageUrl }],
-            launchImageDisplay: true
-          } : {}),
-        } as any,
-        trigger: null,
-      });
-    }
-  } catch (err) {
-    console.log('❌ Error scheduling notification:', err);
-  }
-}
-
-// Global attempt to set background handler, but wrapped
-try {
-  const messaging = getMessaging();
-  if (messaging) {
-    setBackgroundMessageHandler(messaging, async (remoteMessage: any) => {
-      console.log('📬 Message handled in the background!', remoteMessage);
-      await scheduleLocalNotification(remoteMessage);
-    });
-  }
-} catch (e) {
-  console.log('⚠️ Firebase Background Messaging not available');
-}
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
-
-  useEffect(() => {
-    let unsubscribe: undefined | (() => void);
-    let responseListener: any;
-
-    // Handle Local Notification Click (Foreground)
-    responseListener = Notifications.addNotificationResponseReceivedListener((response: any) => {
-      const data = response.notification.request.content.data;
-      if (data?.id) {
-        console.log('📬 Local Notification Clicked:', data);
-        router.push(`/post/${data.id}`);
-      }
-    });
-
-    // Request notification permission and setup FCM
-    async function setupFirebaseMessaging() {
-      try {
-        // Set up Android Channel
-        if (Platform.OS === 'android') {
-          console.log('🛠 Setting up notification channel...');
-          await Notifications.setNotificationChannelAsync('janhimachal_alerts', {
-            name: 'Jan Himachal Alerts',
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FF231F7C',
-            enableVibrate: true,
-            showBadge: true,
-            bypassDnd: true,
-            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-          });
-          const channels = await Notifications.getNotificationChannelsAsync();
-          console.log('📋 Available channels:', channels.map(c => c.id));
-        }
-
-        // Request permission (iOS & Android 13+)
-        const msg = getMessaging();
-
-        // Check Expo Permissions too
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-        if (existingStatus !== 'granted') {
-          const { status } = await Notifications.requestPermissionsAsync();
-          finalStatus = status;
-        }
-
-        const authStatus = await requestPermission(msg);
-        const enabled =
-          authStatus === AuthorizationStatus.AUTHORIZED ||
-          authStatus === AuthorizationStatus.PROVISIONAL ||
-          finalStatus === 'granted';
-
-        if (enabled) {
-          console.log('✅ Notification permission granted (FCM:', authStatus, 'Expo:', finalStatus, ')');
-        } else {
-          console.log('❌ Notification permission denied');
-          return;
-        }
-
-        // Get FCM Token
-        try {
-          const token = await getToken(msg);
-          console.log('🔥 FCM TOKEN:', token);
-
-          // Subscribe to 'news' topic
-          await subscribeToTopic(msg, 'news');
-          console.log('✅ Subscribed to topic: news');
-
-          // Listen to foreground messages
-          unsubscribe = onMessage(msg, async (remoteMessage: any) => {
-            console.log('📬 Foreground notification received:', remoteMessage);
-            await scheduleLocalNotification(remoteMessage);
-          });
-
-          // Listen to background/quit state messages (Deep Linking)
-          onNotificationOpenedApp(msg, (remoteMessage: any) => {
-            console.log('📬 Notification opened from background:', remoteMessage);
-            if (remoteMessage.data?.id) {
-              router.push(`/post/${remoteMessage.data.id}`);
-            }
-          });
-
-          // Check if app was opened from a notification (quit state)
-          getInitialNotification(msg)
-            .then((remoteMessage: any) => {
-              if (remoteMessage?.data?.id) {
-                console.log('📬 Notification opened from quit state:', remoteMessage);
-                setTimeout(() => {
-                  router.push(`/post/${remoteMessage.data!.id}`);
-                }, 500);
-              }
-            });
-        } catch (tokenErr) {
-          console.log('⚠️ Firebase setup incomplete (likely missing native modules or config):', tokenErr);
-        }
-
-      } catch (error) {
-        console.log('❌ Error setting up Firebase Messaging:', error);
-      }
-    }
-
-    setupFirebaseMessaging();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-      if (responseListener) responseListener.remove();
-    };
-  }, []);
 
   return (
     <SafeAreaProvider>
