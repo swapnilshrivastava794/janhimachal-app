@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "741772193881",
+    "project_id": "janhimachal-b4b2b",
+    "storage_bucket": "janhimachal-b4b2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:741772193881:android:ba61fc8ac94a8310c04148",
+        "android_client_info": {
+          "package_name": "com.markazia.janhimachal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjdVamAMKZ8VjlRtq1AndtojyKnhjpVFw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

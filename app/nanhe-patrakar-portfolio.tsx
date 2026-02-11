@@ -324,7 +324,7 @@ export default function NanhePatrakarPortfolioScreen() {
                             <TouchableOpacity
                                 onPress={() => {
                                     // handlePayment()
-                                    Linking.openURL(constant.nanhePatrakarPaymentLink);
+                                    // Linking.openURL(constant.nanhePatrakarPaymentLink);
                                 }}
                                 style={{ backgroundColor: '#856404', paddingVertical: 14, borderRadius: 12, alignItems: 'center', elevation: 4 }}
                             >

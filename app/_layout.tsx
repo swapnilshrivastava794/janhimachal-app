@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -14,6 +15,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  useNotifications();
 
   return (
     <SafeAreaProvider>

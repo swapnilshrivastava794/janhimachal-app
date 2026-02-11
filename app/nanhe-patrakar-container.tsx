@@ -55,7 +55,7 @@ const NanhePatrakarJoinTeaser = () => {
             onPress={() => {
               // router.push('/nanhe-patrakar-registration' as any)
               import('../constants/constant').then(c => {
-                Linking.openURL(c.default.nanhePatrakarPaymentLink);
+                // Linking.openURL(c.default.nanhePatrakarPaymentLink);
               });
             }}
           >
