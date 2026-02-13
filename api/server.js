@@ -20,7 +20,7 @@ const publicEndpoints = [
 ];
 
 // ----------------------------------------------------------
-// REQUEST INTERCEPTOR → Attach token for protected APIs
+// REQUEST INTERCEPTOR → Attach token for protected APIs`
 // ----------------------------------------------------------
 axiosInstance.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
@@ -246,6 +246,12 @@ export function enrollNanhePatrakar(payload) {
     },
   });
 }
+
+// ACCOUNT DELETION REQUEST
+export function requestAccountDeletion() {
+  return axiosInstance.post("/api/account/delete-request/");
+}
+
 
 export function getCategories() {
   return axiosInstance.get("/api/categories/", {

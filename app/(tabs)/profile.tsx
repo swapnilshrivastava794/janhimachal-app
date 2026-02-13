@@ -1,4 +1,4 @@
-import { getDistricts } from '@/api/server';
+import { getDistricts, requestAccountDeletion } from '@/api/server';
 import constant from '@/constants/constant';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
@@ -52,6 +52,7 @@ export default function ProfileScreen() {
     const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Check if child is registered as nanhe_patrakar
     const isNanhePatrakar = (!!user && user?.user_type === 'nanhe_patrakar');
@@ -131,12 +132,12 @@ export default function ProfileScreen() {
 
     const handleUpdate = async () => {
         try {
-            if (!username || !email || !firstName) {
-                Alert.alert('त्रुटि', 'यूजरनेम, ईमेल और नाम अनिवार्य हैं।');
+            if (!username || !firstName) {
+                Alert.alert('त्रुटि', 'यूजरनेम और नाम अनिवार्य हैं।');
                 return;
             }
 
-            if (!isValidEmail(email)) {
+            if (email && !isValidEmail(email)) {
                 Alert.alert('त्रुटि', 'कृपया एक सही ईमेल पता दर्ज करें।');
                 return;
             }
@@ -379,12 +380,12 @@ export default function ProfileScreen() {
                     <View style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee' }]}>
                         <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
                         <View style={{ flex: 1 }}>
-                            <Text style={styles.inputFloatingLabel}>इमेल</Text>
+                            <Text style={styles.inputFloatingLabel}>इमेल (Email) - Optional</Text>
                             <TextInput
                                 style={[styles.input, { color: isEditing ? '#1A1A1A' : '#666', backgroundColor: isEditing ? '#fff' : '#f5f5f5' }]}
                                 value={email}
                                 onChangeText={setEmail}
-                                placeholder="Email"
+                                placeholder="Email (Optional)"
                                 keyboardType="email-address"
                                 editable={isEditing}
                             />
@@ -491,7 +492,7 @@ export default function ProfileScreen() {
 
                         <TouchableOpacity
                             style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', justifyContent: 'space-between' }]}
-                            onPress={() => Linking.openURL('https://www.janhimachal.com/cmscode-of-ethics/')}
+                            onPress={() => Linking.openURL('https://www.janhimachal.com/cmseditorial-policy/')}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Ionicons name="newspaper-outline" size={20} color="#E31E24" style={styles.inputIcon} />
@@ -501,15 +502,65 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.inputGroup, { backgroundColor: '#fff', borderColor: '#eee', justifyContent: 'space-between' }]}
+                            style={[styles.inputGroup, { backgroundColor: theme.card, borderColor: theme.borderColor, justifyContent: 'space-between' }]}
                             onPress={() => Linking.openURL('https://www.janhimachal.com/cmsprivacy-policy/')}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Ionicons name="shield-checkmark-outline" size={20} color="#E31E24" style={styles.inputIcon} />
-                                <Text style={[styles.input, { fontSize: 16, fontWeight: '600' }]}>गोपनीयता नीति (Privacy Policy)</Text>
+                                <Text style={[styles.input, { fontSize: 16, fontWeight: '600', color: theme.text }]}>गोपनीयता नीति (Privacy Policy)</Text>
                             </View>
                             <Ionicons name="chevron-forward" size={20} color="#ccc" />
                         </TouchableOpacity>
+
+                        <View style={{ marginTop: 20 }}>
+                            <TouchableOpacity
+                                style={[styles.deleteAccountBtn, { borderColor: '#ef4444' }, isDeleting && { opacity: 0.7 }]}
+                                onPress={() => {
+                                    if (isDeleting) return;
+                                    Alert.alert(
+                                        'अकाउंट हटाएँ (Delete Account)',
+                                        'क्या आप वाकई अपना अकाउंट हटाना चाहते हैं? यह प्रक्रिया अपरिवर्तनीय है। (Are you sure you want to delete your account? This action is irreversible.)',
+                                        [
+                                            { text: 'रद्द करें (Cancel)', style: 'cancel' },
+                                            {
+                                                text: 'हटाएँ (Delete)',
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    try {
+                                                        setIsDeleting(true);
+                                                        const res = await requestAccountDeletion();
+                                                        if (res.data && res.data.status === "success") {
+                                                            Alert.alert(
+                                                                'अनुरोध प्राप्त हुआ (Request Received)',
+                                                                res.data.message || 'आपका अकाउंट हटाने का अनुरोध प्राप्त हो गया है।',
+                                                                [{ text: 'ठीक है (OK)', onPress: () => logout() }]
+                                                            );
+                                                        } else {
+                                                            throw new Error(res.data.message || "अनुरोध विफल रहा");
+                                                        }
+                                                    } catch (error: any) {
+                                                        Alert.alert('त्रुटि', error.message || 'अकाउंट हटाने का अनुरोध विफल रहा। कृपया बाद में प्रयास करें।');
+                                                    } finally {
+                                                        setIsDeleting(false);
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    );
+                                }}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    <ActivityIndicator size="small" color="#ef4444" style={{ marginRight: 15 }} />
+                                ) : (
+                                    <Ionicons name="trash-outline" size={20} color="#ef4444" style={styles.inputIcon} />
+                                )}
+                                <Text style={styles.deleteAccountText}>अकाउंट हटाएँ (Delete Account)</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.deleteNote}>
+                                अकाउंट हटाने से आपका सारा डेटा और नन्हा पत्रकार प्रोफाइल भी हटा दिया जाएगा।
+                            </Text>
+                        </View>
                     </View>
                 </View>
 
@@ -701,5 +752,26 @@ const styles = StyleSheet.create({
     uploadPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     uploadText: { fontSize: 12, color: '#666', marginTop: 5 },
     uploadedImgPreview: { width: '100%', height: '100%' },
+    deleteAccountBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        marginTop: 10,
+    },
+    deleteAccountText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#ef4444',
+    },
+    deleteNote: {
+        fontSize: 11,
+        color: '#888',
+        marginTop: 8,
+        marginLeft: 4,
+        lineHeight: 16,
+    },
 });
 

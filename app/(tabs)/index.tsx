@@ -11,6 +11,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Dimensions, FlatList, Image, InteractionManager, Linking, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -64,6 +65,21 @@ export default function HomeScreen() {
   const backgroundTimestamp = useRef<number>(Date.now());
 
   const isNanhePatrakar = user?.user_type === 'nanhe_patrakar';
+
+  // Video Player state
+  const [isMuted, setIsMuted] = useState(true);
+  const videoSource = 'https://internationalnewsalliance.com/nanhe-patrakar.mp4';
+
+  const player = useVideoPlayer(videoSource, (player) => {
+    player.loop = true;
+    player.play();
+    player.muted = true;
+  });
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    player.muted = !player.muted;
+  };
 
 
 
@@ -354,17 +370,11 @@ export default function HomeScreen() {
   const renderHeader = () => (
     <View>
       {/* Merged Nanhe Patrakar Banner (Poster Look + Smart Logic) */}
+      {/* Merged Nanhe Patrakar Banner (Video Player + Smart Logic) */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => {
-          if (!user) {
-            router.push('/auth/login' as any);
-          } else if (parentProfile) {
-            router.push('/nanhe-patrakar-portfolio' as any);
-          } else {
-            // router.push('/nanhe-patrakar-registration' as any);
-            Linking.openURL(constant.nanhePatrakarPaymentLink);
-          }
+          Linking.openURL('https://www.janhimachal.com/nanhe-patrakar/register/');
         }}
         style={{
           marginHorizontal: 16,
@@ -372,19 +382,38 @@ export default function HomeScreen() {
           marginBottom: 16,
           borderRadius: 20,
           overflow: 'hidden',
-          backgroundColor: '#ffffffff',
+          backgroundColor: '#000',
           elevation: 10,
-          shadowColor: '#0a0707ff',
+          shadowColor: '#000',
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.4,
-          shadowRadius: 12
+          shadowRadius: 12,
+          height: 500, // Taller height for Reel (9:16) format
         }}
       >
-        <Image
-          source={require('@/assets/nanhe-patarkar.jpg')}
-          style={{ width: '90%', height: 300 }}
-          resizeMode="contain"
+        <VideoView
+          player={player}
+          style={{ width: '100%', height: '100%' }}
+          contentFit="contain" // Contain ensures nothing is cropped
+          allowsFullscreen={false}
+          allowsPictureInPicture={false}
         />
+        {/* Sound Toggle Button */}
+        <TouchableOpacity
+          onPress={toggleMute}
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            right: 20,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            padding: 10,
+            borderRadius: 25,
+            zIndex: 10
+          }}
+        >
+          <Ionicons name={isMuted ? 'volume-mute' : 'volume-high'} size={20} color="#fff" />
+        </TouchableOpacity>
+
         {/* Subtle tag overlay to indicate it's active */}
         <View style={{ position: 'absolute', top: 15, right: 15, backgroundColor: 'rgba(227, 30, 36, 0.9)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
           <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{isNanhePatrakar ? 'MY DASHBOARD' : 'REGISTER NOW'}</Text>
